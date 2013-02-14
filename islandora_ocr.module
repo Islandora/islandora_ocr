@@ -6,7 +6,7 @@
  */
 
 // Constants.
-define('TESSERACT_REQUIRED_VERSION', '3.02');
+define('TESSERACT_REQUIRED_VERSION', '3.02.02');
 
 /**
  * Implements hook_menu().
