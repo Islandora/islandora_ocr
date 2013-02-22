@@ -6,17 +6,6 @@
  */
 
 /**
- * Implements hook_install().
- *
- * @see islandora_ocr_islandora_required_objects()
- */
-function islandora_ocr_install() {
-  module_load_include('inc', 'islandora_ocr', 'includes/utilities');
-  variable_set('islandora_ocr_tesseract', '/usr/bin/tesseract');
-  variable_set('islandora_ocr_tesseract_enabled_languages', drupal_map_assoc(array_keys(islandora_ocr_get_tesseract_languages())));
-}
-
-/**
  * Implements hook_uninstall().
  */
 function islandora_ocr_uninstall() {
