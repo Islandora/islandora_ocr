@@ -26,6 +26,7 @@ function islandora_ocr_admin_settings_form(array $form, array &$form_state) {
   $version = islandora_ocr_get_tesseract_version($tesseract);
   $installed_languages = islandora_ocr_get_tesseract_installed_languages($tesseract);
   $enabled_languages = $get_default_value('islandora_ocr_tesseract_enabled_languages', drupal_map_assoc($installed_languages));
+  $solr_enabled = module_exists('islandora_solr');
   return system_settings_form(array(
       '#prefix' => '<div id="tesseract-wrapper">',
       '#suffix' => '</div>',
@@ -52,7 +53,34 @@ function islandora_ocr_admin_settings_form(array $form, array &$form_state) {
                              Check with your systems admininistrator if you are
                              unsure of availablilty'),
         '#default_value' => $enabled_languages,
-      )));
+      ),
+      'islandora_ocr_solr_hocr_highlighting_use_fast' => array(
+        '#access' => $solr_enabled,
+        '#type' => 'checkbox',
+        '#title' => t('Enable Solr Fast Vector Highlighting'),
+        '#description' => t('This requires the field below to use !fl_link.', array(
+                          '!fl_link' => l(t('Fast Vector Highlighting'), 'http://wiki.apache.org/solr/HighlightingParameters', array(
+                                        'fragment' => 'hl.useFastVectorHighlighter',
+                                      )),
+                        )),
+        '#default_value' => $get_default_value('islandora_ocr_solr_hocr_highlighting_use_fast', TRUE),
+      ),
+      'islandora_ocr_solr_hocr_highlighting_field' => array(
+        '#access' => $solr_enabled,
+        '#type' => 'textfield',
+        '#title' => t('Solr field containing OCR text'),
+        '#description' => t('The solr field to use for highlighting.<br/>If Fast Vector Highlighting is enabled some special requirements must be met.'),
+        '#default_value' => $get_default_value('islandora_ocr_solr_hocr_highlighting_field', 'text_nodes_HOCR_hlt'),
+      ),
+      'islandora_ocr_solr_hocr_result_count' => array(
+        '#access' => $solr_enabled,
+        '#type' => 'textfield',
+        '#title' => t('The maximum number of results to return in a solr query'),
+        '#description' => t('The maximum number of pages that will be returned by a full text search.'),
+        '#element_validate' => array('element_validate_number'),
+        '#default_value' => $get_default_value('islandora_ocr_solr_hocr_result_count', '32'),
+      ),
+    ));
 }
 
 /**

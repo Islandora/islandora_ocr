@@ -6,6 +6,9 @@
  *
  * Only supports searching for words at the moment but could easily be extended
  * to support line/paragraph level searches.
+ *
+ * Makes the assumption that only a single page will be contained in the HOCR
+ * document at a time.
  */
 
 class HOCR {
@@ -14,12 +17,12 @@ class HOCR {
    * The HOCR file.
    * @var DOMDocument
    */
-  protected $doc;
+  public $doc;
   /**
    * The XPath for querying the HOCR file.
    * @var DOMXPath
    */
-  protected $xpath;
+  public $xpath;
 
   /**
    * Instantiates an HOCR object from the given datastream.
@@ -76,7 +79,8 @@ class HOCR {
     @$doc = simplexml_load_file($file);
     if ($doc) {
       $doc->registerXPathNamespace('ns', 'http://www.w3.org/1999/xhtml');
-      $version = (string) array_pop($doc->xpath('/ns:html/ns:head/ns:meta[@name="ocr-system"]/@content'));
+      $content_attributes = $doc->xpath('/ns:html/ns:head/ns:meta[@name="ocr-system"]/@content');
+      $version = (string) reset($content_attributes);
       $version = str_replace(array('tesseract', ' '), '', $version);
       return empty($version) ? FALSE : $version;
     }
@@ -100,83 +104,380 @@ class HOCR {
     $this->xpath = new DOMXPath($this->doc);
     $this->xpath->registerNamespace("php", "http://php.net/xpath");
     $this->xpath->registerPhpFunctions();
-    //    $this->xpath->registerPhpFunctions('mb_strtolower');
+  }
+
+  /**
+   * Gets the dimensions for the given page.
+   *
+   * Almost all HOCR documents will only have one page. Page indexes start from
+   * zero.
+   *
+   * @param int $page_number
+   *   (optional) The number of page to get, defaults to 0.
+   *
+   * @return array
+   *   An associative array:
+   *   - width: The width of the page.
+   *   - height: The height of the page.
+   */
+  public function getPageDimensions($page_number = 0) {
+    $nodes = $this->findClassNodes('ocr_page');
+    $pages = $this->getProperties($nodes);
+    foreach ($pages as $page) {
+      if ($page['ppageno'] == $page_number) {
+        return $this->getPropertyDimensions($page);
+      }
+    }
+    return FALSE;
   }
 
   /**
    * Searches for given term properties defined by the terms classes.
    *
-   * @param string $term
-   *   The term to search for.
-   * @param array $classes
-   *   The classes of properties to return, expecting one of the following:
-   *   'ocr_page', 'ocr_carea', 'ocr_par', 'ocr_line', 'ocrx_word'.
+   * @param mixed $terms
+   *   Either an array or string, the term or terms to search for, the options
+   *   parameter will effect how the terms are interpreted.
+   *   When a string is given white-space characters are interpreted as
+   *   delimiters, unless solr is provided in the options.
    * @param array $options
    *   Options to modify the text selection of the search:
    *   - case_sensitive: Defaults to FALSE.
+   *   - classes: The classes of elements to return, expecting one or more  of
+   *     the following: 'ocr_page', 'ocr_carea', 'ocr_par', 'ocr_line',
+   *     'ocrx_word'.
+   *   - solr: The solr parameters from the solr query that generated the term.
+   *     these will be used to parse the given terms.
+   *   - match_exact_phrase: Only match the given terms if they occur in the
+   *     same order.
    *
    * @return array
    *   The properties for each term and its respective classes.
    */
-  public function search($term, array $classes = array('ocrx_word'), array $options = array('case_sensitive' => FALSE)) {
-    $results = array();
-    $nodes = $this->find($term, $classes, $options);
-    foreach ($nodes as $node) {
-      $results[] = $this->getProperties($node);
-    }
-    return $results;
+  public function search($terms, array $options = array()) {
+    $options += array(
+      'classes' => array('ocrx_word'),
+      'case_sensitive' => TRUE,
+      'match_exact_phrase' => TRUE,
+    );
+    $terms = $this->preprocessSearchTerms($terms, $options);
+    $nodes = $this->findTermNodes($terms, $options);
+    return $nodes ? $this->getProperties($nodes) : array();
   }
 
   /**
-   * Find all instances of the given term in document.
+   * Preprocess the search term.
    *
-   * @param string $term
-   *   The term to search for.
-   * @param array $classes
-   *   The classes of the elements to find, one or more of the following:
-   *   'ocr_page', 'ocr_carea', 'ocr_par', 'ocr_line', 'ocrx_word'.
-   *   If no classes are given all text nodes with the given term are returned.
+   * If SOLR parameters are given as an option, use them to extract the exact
+   * term as it would exist in the HOCR document.
+   *
+   * @param mixed $terms
+   *   Either an array or string, the term or terms to search for, the options
+   *   parameter will effect how the terms are interpreted.
    * @param array $options
    *   Options to modify the text selection of the search:
    *   - case_sensitive: Defaults to FALSE.
+   *   - classes: The classes of elements to return, expecting one or more  of
+   *     the following: 'ocr_page', 'ocr_carea', 'ocr_par', 'ocr_line',
+   *     'ocrx_word'.
+   *   - solr: The solr parameters from the solr query that generated the term.
+   *     these will be used to parse the given terms.
+   *
+   * @return string
+   *   The altered search term which is more likely to match a word in the HOCR
+   *   ocument.
+   */
+  protected function preprocessSearchTerms($terms, array $options) {
+    if (isset($options['solr'])) {
+      $terms = is_array($terms) ? $terms : array($terms);
+      return $this->solrExtractSearchTerms($terms, $options['solr']);
+    }
+    // String HOCR terms treat whitespace as delimiters.
+    return is_string($terms) ? explode(' ', $terms) : $terms;
+  }
+
+  /**
+   * Extracts the exact terms as they would exist in the HOCR document.
+   *
+   * The exact term is extracted by using the highlighted information used to
+   * generate the result.
+   *
+   * @param array $solr_highlighted_fields
+   *   The solr highlighted field snippets.
+   * @param array $solr_params
+   *   The solr parameters from the solr query that generated the term.
+   *
+   * @return array
+   *   An array of HOCR terms.
+   */
+  protected function solrExtractSearchTerms(array $solr_highlighted_fields, array $solr_params) {
+    $terms = array();
+    $regex_pattern = $this->solrHighlightedFieldTermRegexPattern($solr_params);
+    foreach ($solr_highlighted_fields as $solr_highlighted_field) {
+      $mapped_terms = $this->solrMapHighlightedFieldToTerms($solr_highlighted_field, $regex_pattern);
+      $terms = array_merge($terms, $mapped_terms);
+    }
+    return $terms;
+  }
+
+  /**
+   * Maps the highlighted SOLR field to HOCR terms, using the given pattern.
+   *
+   * @param array $solr_highlighted_field
+   *   A solr highlighted field.
+   * @param string $regex_pattern
+   *   The solr parameters from the solr query that generated the term.
+   *
+   * @return array
+   *   HOCR terms.
+   */
+  protected function solrMapHighlightedFieldToTerms($solr_highlighted_field, $regex_pattern) {
+    $terms = array();
+    $matches = array();
+    if (preg_match_all($regex_pattern, $solr_highlighted_field, $matches)) {
+      foreach ($matches[0] as $index => $match) {
+        $term = $this->solrMapHighlightedFieldRegexMatchToTerm($matches, $index);
+        // String HOCR terms treat whitespace as delimiters.
+        $tokens = preg_split('/\s+/', $term);
+        $terms = array_merge($terms, $tokens);
+      }
+    }
+    return $terms;
+  }
+
+  /**
+   * Generates a regex pattern for extracting highlighted terms from SOLR.
+   *
+   * Can match multiple highlighted terms within a highlighted SOLR field.
+   *
+   * @param array $solr_params
+   *   SOLR query parameters used to generate the highlighted SOLR field.
+   *
+   * @return string
+   *   The regex pattern for extracting terms from the higlighted SOLR field.
+   *   The pattern contains three subpatterns, the first and third match any
+   *   non-whitespace characters that occur before and after the highlighted
+   *   field. This is required because SOLR can ignore some characters included
+   *   inside the HOCR term.
+   */
+  protected function solrHighlightedFieldTermRegexPattern(array $solr_params) {
+    $use_fast_vector_highlighted = isset($solr_params['hl.useFastVectorHighlighter']) && $solr_params['hl.useFastVectorHighlighter'] == 'true';
+    $highlighter = $use_fast_vector_highlighted ? 'tag' : 'simple';
+    $hl_pre = isset($solr_params["hl.{$highlighter}.pre"]) ? $solr_params["hl.{$highlighter}.pre"] : '<em>';
+    $hl_post = isset($solr_params["hl.{$highlighter}.post"]) ? $solr_params["hl.{$highlighter}.post"] : '</em>';
+    $hl_pre = preg_quote($hl_pre, '/');
+    $hl_post = preg_quote($hl_post, '/');
+    return "/([^\s]*){$hl_pre}(.+?){$hl_post}([^\s]*)/";
+  }
+
+  /**
+   * Maps the the matched highlighted SOLR field to an HOCR term.
+   *
+   * @see solrHighlightedFieldTermRegexPattern()
+   *
+   * @param array $matches
+   *   The regex matches as returned by preg_match.
+   *
+   * @return string
+   *   The HOCR term.
+   */
+  protected function solrMapHighlightedFieldRegexMatchToTerm(array $matches, $index) {
+    return format_string('!before_pre!solr_selected_fragment!after_post', array(
+        '!before_pre' => $matches[1][$index],
+        '!solr_selected_fragment' => $matches[2][$index],
+        '!after_post' => $matches[3][$index],
+      ));
+  }
+
+  /**
+   * Find instances of the given term in document.
+   *
+   * @param array $terms
+   *   The terms to search for.
+   * @param array $options
+   *   Options to modify the text selection of the search:
+   *   - case_sensitive: Defaults to FALSE.
+   *   - classes: The classes of elements to return, expecting one or more  of
+   *     the following: 'ocr_page', 'ocr_carea', 'ocr_par', 'ocr_line',
+   *     'ocrx_word'.
+   *   - solr: The solr parameters from the solr query that generated the term.
+   *     these will be used to parse the given terms.
    *
    * @return DOMNodeList
    *   All matching elements containing the given term and classes.
    */
-  protected function find($term, array $classes, array $options) {
-    $query = $this->getTextQuery($term, $options);
-    if (!empty($classes)) {
-      $classes = array_map(function($class) {return "@class = '{$class}'";}, $classes);
-      $classes = implode(' or ', $classes);
-      $query = "{$query}/ancestor-or-self::node()[{$classes}]";
-      debug($query);
-      return $this->xpath->query($query);
+  protected function findTermNodes(array $terms, array $options) {
+    if (!empty($terms)) {
+      $term_predicate = $this->getTermQueryPredicate($terms, $options);
+      if (!empty($term_predicate)) {
+        $query = "//*$term_predicate";
+        if (!empty($options['classes'])) {
+          $class_predicate = $this->getClassQueryPredicate($options['classes']);
+          $query .= "/ancestor-or-self::node(){$class_predicate}";
+        }
+        return $this->xpath->query($query);
+      }
     }
-    return $this->xpath->query($query);
+    return array();
   }
 
   /**
-   * Generates a query for finding the given term.
+   * Gets the text node (term) values predicate.
    *
-   * @param string $term
-   *   The term to search for.
+   * @param array $terms
+   *   The terms used to generate the predicate.
+   * @param array $options
+   *   Options to modify the text selection of the search:
+   *   - case_sensitive: Defaults to FALSE.
+   *   - classes: The classes of elements to return, expecting one or more  of
+   *     the following: 'ocr_page', 'ocr_carea', 'ocr_par', 'ocr_line',
+   *     'ocrx_word'.
+   *
+   * @return string
+   *   A XPath predicate that limits the query by the given terms.
+   */
+  protected function getTermQueryPredicate(array $terms, array $options) {
+    if (isset($options['match_exact_phrase']) && $options['match_exact_phrase']) {
+      return $this->getTermPhraseQueryPredicate($terms, $options);
+    }
+    else {
+      $get_term_predicate = $this->getMatchTermExpressionFunction($options);
+      $terms = array_map(array($this, $get_term_predicate), $terms);
+      $predicate = implode(' or ', $terms);
+      return "[$predicate]";
+    }
+  }
+
+  /**
+   * Generates a phrase matching predicates that will only match nodes.
+   *
+   * Takes the form of:
+   * [text() = 'term_1' and following::*[1..n][text() = 'term_2..n']]/preceding::node()[1]/following::[position() <= n]
+   *
+   * @param array $terms
+   *   The phrase, assumed to be in order phrase.
    * @param array $options
    *   Options to modify the text selection of the search:
    *   - case_sensitive: Defaults to FALSE.
    *
    * @return string
-   *   An XPath that will select all instances of the given term.
+   *   The predicate that will match the given phrase.
    */
-  protected function getTextQuery($term, array $options) {
-    if (isset($options['case_sensitive']) && $options['case_sensitive']) {
-      return "//*[text() = '{$term}']";
+  protected function getTermPhraseQueryPredicate(array $terms, array $options) {
+    $phrase_predicate = array();
+    $get_term_predicate = $this->getMatchTermExpressionFunction($options);
+    foreach ($terms as $i => $term) {
+      $term = $this->{$get_term_predicate}($term, 'self::node()');
+      $phrase_predicate[] = "following::text()[normalize-space(self::node())][$i][{$term}]";
     }
-    $term = mb_strtolower($term);
-    return "//*[php:functionString('mb_strtolower', text()) = '{$term}']";
+    // The first predicate acts as an anchor, which selects the first node
+    // in the given phrase if all other terms in the phrase follow it in
+    // the correct order.
+    $phrase_predicate[0] = $this->{$get_term_predicate}($terms[0]);
+    $phrase_predicate = implode(' and ', $phrase_predicate);
+    $count = count($terms);
+    $predicate = "[{$phrase_predicate}]";
+    if ($count > 1) {
+      $predicate .= "/preceding::node()[1]/following::text()[normalize-space(self::node())][position() <= {$count}]";
+    }
+    return $predicate;
   }
 
   /**
-   * Gets all the defined properties for the given element.
+   * Get the term predicate function based on the search options.
+   *
+   * @param array $options
+   *   Options to modify the text selection of the search:
+   *   - case_sensitive: Defaults to FALSE.
+   *
+   * @return string
+   *   The member function to use for creating term predicates.
+   */
+  protected function getMatchTermExpressionFunction(array $options) {
+    $case_sensitive = isset($options['case_sensitive']) && $options['case_sensitive'];
+    return $case_sensitive ? 'getCaseSensitiveMatchTermExpression' : 'getCaseInsensitiveMatchTermExpression';
+  }
+
+  /**
+   * Generates a XPath predicate that matches the given term exactly.
+   *
+   * @param string $term
+   *   The term to match.
+   *
+   * @return string
+   *   The XPath predicate to match the given term exactly.
+   */
+  protected function getCaseSensitiveMatchTermExpression($term, $node = 'text()') {
+    return "$node = '{$term}'";
+  }
+
+  /**
+   * Generates a XPath predicate performs a case-insensitive match.
+   *
+   * @param string $term
+   *   The term to match.
+   *
+   * @return string
+   *   The XPath predicate to do a case-insensitive match on the given term.
+   */
+  protected function getCaseInsensitiveMatchTermExpression($term, $node = 'text()') {
+    $term = mb_strtolower($term);
+    return "php:functionString('mb_strtolower', $node) = '{$term}'";
+  }
+
+  /**
+   * Find all nodes of a given classes.
+   *
+   * @param mixed $classes
+   *   The class/classes of the elements to find, one or more of the following:
+   *   'ocr_page', 'ocr_carea', 'ocr_par', 'ocr_line', 'ocrx_word'.
+   *   If no classes are given all nodes are returned.
+   */
+  protected function findClassNodes($classes) {
+    $class_predicate = $this->getClassQueryPredicate($classes);
+    return $this->xpath->query("//node(){$class_predicate}");
+  }
+
+  /**
+   * Gets the classes attribute predicate.
+   *
+   * @param mixed $classes
+   *   The class/classes of the elements to find, one or more of the following:
+   *   'ocr_page', 'ocr_carea', 'ocr_par', 'ocr_line', 'ocrx_word'.
+   *   If no classes are given all nodes are returned.
+   *
+   * @return string
+   *   A XPath predicate that limits the query by the given class attributes.
+   */
+  protected function getClassQueryPredicate($classes) {
+    $classes = is_array($classes) ? $classes : array($classes);
+    $classes = array_map(function($class) {return "@class = '{$class}'";}, $classes);
+    $predicate = implode(' or ', $classes);
+    return "[$predicate]";
+  }
+
+  /**
+   * Gets the class properties for each of the given nodes.
+   *
+   * @param DOMNodeList $nodes
+   *   An array of DOMNode elements that have a class attribute.
+   *
+   * @return array
+   *   An array of the properities for each given node.
+   *
+   * @see HOCR::getClassProperties()
+   */
+  protected function getProperties(DOMNodeList $nodes) {
+    $results = array();
+    foreach ($nodes as $node) {
+      $results[] = $this->getClassNodeProperties($node);
+    }
+    return $results;
+  }
+
+  /**
+   * Gets all the defined properties for the given class element.
+   *
+   * Gets nothing for non class elements.
    *
    * @param DOMElement $element
    *   The element.
@@ -187,29 +488,61 @@ class HOCR {
    *   - class: The class of the given element, 'ocrx_word', 'ocr_line', etc.
    *   - dir: The direction of the written text either 'ltr' or 'rtl'.
    *   - bbox: The bounding box  of the given element.
-   *     - l: The left most point of the element in pixels.
-   *     - t: The top most point of the element in pixels.
-   *     - r: The right most point of the element in pixels.
-   *     - b: The bottom most point of the element in pixels.
+   *     - left: The left most point of the element in pixels.
+   *     - top: The top most point of the element in pixels.
+   *     - right: The right most point of the element in pixels.
+   *     - bottom: The bottom most point of the element in pixels.
+   *   - ppageno: The number of the page if the class is 'ocr_page'.
    */
-  protected function getProperties(DOMElement $element) {
+  protected function getClassNodeProperties(DOMElement $element) {
     $bbox = NULL;
     if ($element->hasAttribute('title')) {
       $matches = array();
       $title = $element->getAttribute('title');
-      preg_match('/bbox ([0-9]*) ([0-9]*) ([0-9]*) ([0-9]*)/', $title, $matches);
-      $bbox = array(
-        'l' => intval($matches[1]),
-        't' => intval($matches[2]),
-        'r' => intval($matches[3]),
-        'b' => intval($matches[4]),
-      );
+      $pattern = '/bbox ([0-9]*) ([0-9]*) ([0-9]*) ([0-9]*)/';
+      if (preg_match($pattern, $title, $matches)) {
+        $bbox = array(
+          'left' => intval($matches[1]),
+          'top' => intval($matches[2]),
+          'right' => intval($matches[3]),
+          'bottom' => intval($matches[4]),
+        );
+      }
+      $pattern = '/ppageno ([0-9]*)/';
+      if (preg_match($pattern, $title, $matches)) {
+        $ppageno = isset($matches[1]) ? intval($matches[1]) : NULL;
+      }
     }
-    return array_filter(array(
+    $properties = array_filter(array(
       'id' => $element->hasAttribute('id') ? $element->getAttribute('id') : NULL,
       'class' => $element->hasAttribute('class') ? $element->getAttribute('class') : NULL,
       'dir' => $element->hasAttribute('dir') ? $element->getAttribute('dir') : NULL,
-      'bbox' => $bbox,
-      ));
+      'bbox' => $bbox));
+    if (isset($ppageno)) {
+      $properties['ppageno'] = $ppageno;
+    }
+    return $properties;
+  }
+
+  /**
+   * Gets the dimensions of the given class node properties.
+   *
+   * If the properties don't contain 'bbox' then 0 is returned
+   * for the dimensions.
+   *
+   * @return array
+   *   An associative array containing the properties dimensions.
+   *   - width: The width of the page.
+   *   - height: The height of the page.
+   */
+  protected function getPropertyDimensions(array $properties) {
+    $width = 0;
+    $height = 0;
+    if (isset($properties['bbox'])) {
+      $bbox = $properties['bbox'];
+      $width = $bbox['right'] - $bbox['left'];
+      $height = $bbox['bottom'] - $bbox['top'];
+    }
+    return array('width' => $width, 'height' => $height);
   }
 }
