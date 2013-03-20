@@ -162,7 +162,7 @@ function islandora_ocr_create_hocr($image_file, array $options) {
     return FALSE;
   }
   if (!HOCR::isValid($out_file)) {
-    $message = 'tesseract failed to create valid hocr make sure to check your running a supported version of tesseract 3.2 or later.';
+    $message = 'tesseract failed to create valid hocr make sure to check your running a supported version of tesseract 3.02 or later.';
     $message .= '<br/>Error: @ret<br/>Command: @command<br/>Output: !output';
     $variables = array(
       '@ret' => $ret,

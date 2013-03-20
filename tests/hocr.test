@@ -16,7 +16,7 @@ class HOCRUnitTestCase extends DrupalWebTestCase {
     return array(
       'name' => 'HOCR class Unit Tests',
       'description' => 'Ensure that HOCR parsing works.',
-      'group' => 'Islandora',
+      'group' => 'Islandora OCR',
     );
   }
 
@@ -47,10 +47,10 @@ class HOCRUnitTestCase extends DrupalWebTestCase {
       $file = drupal_get_path('module', 'islandora_ocr') . '/tests/fixtures/test.tif.html';
       $file = drupal_realpath($file);
       $hocr = new HOCR($file);
-      $this->pass('No exception thrown when vaild file parameter given.');
+      $this->pass('No exception thrown when valid file parameter given.');
     }
     catch(Exception $e) {
-      $this->fail('Exception thrown when vaild file parameter given.');
+      $this->fail('Exception thrown when valid file parameter given.  '. $file);
     }
     // Expecting count(//*[text()='the' or text()='The']) == 9
     $results = $hocr->search('ThE');
