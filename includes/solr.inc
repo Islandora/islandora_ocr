@@ -28,7 +28,9 @@ function islandora_ocr_highlighted_solr_search($query, $offset = 0, $limit = -1,
   // Remove any fields that have no values specified so the defaults can be
   // applied.
   $params = array_filter($params);
-  $params += array(
+
+  // Our settings... We add in the original, items at the end.
+  $params = array(
     'hl' => 'true',
     'qt' => variable_get('islandora_solr_request_handler', 'standard'),
     'hl.fl' => variable_get('islandora_ocr_solr_hocr_highlighting_field', 'text_nodes_HOCR_hlt'),
@@ -41,7 +43,8 @@ function islandora_ocr_highlighted_solr_search($query, $offset = 0, $limit = -1,
     // may end with in the HOCR.
     "hl.fragsize" => max((int) (drupal_strlen($query) * 1.10), 18),
     "hl.snippets" => "8",
-  );
+  ) + $params;
+
   $url = parse_url(variable_get('islandora_solr_url', 'localhost:8080/solr'));
   $solr = new Apache_Solr_Service($url['host'], $url['port'], $url['path'] . '/');
   $solr->setCreateDocuments(0);
