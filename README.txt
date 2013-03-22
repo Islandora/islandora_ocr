@@ -46,8 +46,31 @@ README Wiki for detailed instructions.
 
  http://code.google.com/p/tesseract-ocr/wiki/ReadMe
 
+
+Solr result highlighting:
+
+To have Islandora viewers recognize Solr search results and highlight them
+one will need to configure Solr to index the HOCR in a particular fashion.
+
+The field that the HOCR is stored in must have the following attributes:
+indexed="true"  stored="true" termVectors="true" termPositions="true"
+termOffsets="true"
+
+Each text node of each element in the HOCR datastream must be placed in
+order in a single value for the Solr field with all whitespace sub strings
+normalized to a single space.
+
+Any objects that were previously ingested but require this functionality
+will need to be re-indexed.
+
+Reference Implementation:
+https://github.com/discoverygarden/basic-solr-config/blob/modular/islandora_transforms/XML_text_nodes_to_solr.xslt
+
 CONFIGURATION
 -------------
+
+The Solr field for used for highlighting can be configured at 
+admin/islandora/ocr.
 
 Tesseract:
 
