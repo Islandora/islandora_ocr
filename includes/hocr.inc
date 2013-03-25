@@ -156,7 +156,7 @@ class HOCR {
   public function search($terms, array $options = array()) {
     $options += array(
       'classes' => array('ocrx_word'),
-      'case_sensitive' => TRUE,
+      'case_sensitive' => FALSE,
       'match_exact_phrase' => TRUE,
     );
     $terms = $this->preprocessSearchTerms($terms, $options);
