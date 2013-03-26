@@ -80,6 +80,12 @@ function islandora_ocr_admin_settings_form(array $form, array &$form_state) {
         '#element_validate' => array('element_validate_number'),
         '#default_value' => $get_default_value('islandora_ocr_solr_hocr_result_count', '32'),
       ),
+      'islandora_ocr_validate_ocr_on_load' => array(
+        '#type' => 'checkbox',
+        '#title' => t('Validate HOCR on load?'),
+        '#description' => t('Verify that HOCR loaded came from the required version of Tesseract.  May not be applicable if the HOCR came from another source.'),
+        '#default_value' => $get_default_value('islandora_ocr_validate_ocr_on_load', TRUE),
+      ),
     ));
 }
 

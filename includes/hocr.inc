@@ -29,16 +29,20 @@ class HOCR {
    *
    * @param AbstractFedoraDatastream $datastream
    *   The datastream containing the HOCR file.
+   * @param array $options
+   *   An associative array of options to give to the HOCR constructor.
    *
    * @return HOCR
    *   An object of this class build from the given datastream.
+   *
+   * @see HOCR::__construct()
    */
-  public static function fromDatastream(AbstractFedoraDatastream $datastream) {
+  public static function fromDatastream(AbstractFedoraDatastream $datastream, array $options = array()) {
     $mime_detect = new MimeDetect();
     $ext = $mime_detect->getExtension($datastream->mimeType);
     $file = file_create_filename("{$datastream->parent->id}_{$datastream->id}.{$ext}", 'temporary://');
     $datastream->getContent($file);
-    $hocr = new HOCR($file);
+    $hocr = new HOCR($file, $options);
     file_unmanaged_delete($file);
     return $hocr;
   }
@@ -92,11 +96,20 @@ class HOCR {
    *
    * @param string $file
    *   The absolute path to the HOCR file.
+   * @param array $options
+   *   An associative array of options. Currently recognized:
+   *   - validate: A boolean indicating whether or not we should validate the
+   *     provided file, using HOCR::isValid(). Defaults to TRUE.
    *
    * @throws InvalidArgumentException
    */
-  public function __construct($file) {
-    if (!self::isValid($file)) {
+  public function __construct($file, array $options = array()) {
+    // Add in our default.
+    $options += array(
+      'validate' => TRUE,
+    );
+
+    if ($options['validate'] && !self::isValid($file)) {
       throw new InvalidArgumentException('Attempted to instantiate HOCR class without a valid HOCR file.');
     }
     $this->doc = new DOMDocument('1.0', 'UTF-8');
