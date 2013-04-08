@@ -25,6 +25,13 @@ function islandora_ocr_disable() {
 }
 
 /**
+ * Implements hook_enable().
+ */
+function islandora_ocr_enable() {
+  drupal_set_message(t('Note: Enabling the Islandora OCR module only enables support for OCR. It does NOT automatically add OCR functionality to modules whose OCR settings are disabled by default. Please check the OCR settings in the administration pages for any OCR-compatible Solution Packs.'), 'warning');
+}
+
+/**
  * Cleans up variables used in derivative generation.
  */
 function islandora_ocr_cleanup_derivatives() {
