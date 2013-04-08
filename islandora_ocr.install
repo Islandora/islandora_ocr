@@ -14,4 +14,29 @@ function islandora_ocr_uninstall() {
     'islandora_ocr_tesseract_enabled_languages',
   );
   array_walk($variables, 'variable_del');
+  islandora_ocr_cleanup_derivatives();
+}
+
+/**
+ * Implements hook_disable().
+ */
+function islandora_ocr_disable() {
+  islandora_ocr_cleanup_derivatives();
+}
+
+/**
+ * Cleans up variables used in derivative generation.
+ */
+function islandora_ocr_cleanup_derivatives() {
+  if (module_exists('islandora_book')) {
+    $book = variable_get('islandora_book_ingest_derivatives');
+    $book['ocr'] = FALSE;
+    variable_set('islandora_book_ingest_derivatives', $book);
+  }
+
+  if (module_exists('islandora_newspaper')) {
+    $newspaper = variable_get('islandora_newspaper_ingest_derivatives');
+    $newspaper['ocr'] = FALSE;
+    variable_set('islandora_newspaper_ingest_derivatives', $newspaper);
+  }
 }
