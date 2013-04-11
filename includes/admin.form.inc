@@ -49,9 +49,9 @@ function islandora_ocr_admin_settings_form(array $form, array &$form_state) {
         '#options' => drupal_map_assoc($installed_languages, 'islandora_ocr_tesseract_language_name'),
         '#description' => t('Select from the language packs available on your
                              processing server.<br/> These are normally found in
-                             <strong>/usr/local/share/tessdata/</strong><br/>
+                             <strong>/usr/local/share/tessdata/</strong>.<br/>
                              Check with your systems admininistrator if you are
-                             unsure of availablilty'),
+                             unsure of availablilty.'),
         '#default_value' => $enabled_languages,
       ),
       'islandora_ocr_solr_hocr_highlighting_use_fast' => array(
@@ -69,13 +69,13 @@ function islandora_ocr_admin_settings_form(array $form, array &$form_state) {
         '#access' => $solr_enabled,
         '#type' => 'textfield',
         '#title' => t('Solr field containing OCR text'),
-        '#description' => t('The solr field to use for highlighting.<br/>If Fast Vector Highlighting is enabled some special requirements must be met.'),
+        '#description' => t('The Solr field to use for highlighting.<br/>If Fast Vector Highlighting is enabled, some special requirements must be met.'),
         '#default_value' => $get_default_value('islandora_ocr_solr_hocr_highlighting_field', 'text_nodes_HOCR_hlt'),
       ),
       'islandora_ocr_solr_hocr_result_count' => array(
         '#access' => $solr_enabled,
         '#type' => 'textfield',
-        '#title' => t('The maximum number of results to return in a solr query'),
+        '#title' => t('Maximum number of results to return in a Solr query'),
         '#description' => t('The maximum number of pages that will be returned by a full text search.'),
         '#element_validate' => array('element_validate_number'),
         '#default_value' => $get_default_value('islandora_ocr_solr_hocr_result_count', '32'),

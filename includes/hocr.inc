@@ -97,7 +97,7 @@ class HOCR {
    */
   public function __construct($file) {
     if (!self::isValid($file)) {
-      throw new InvalidArgumentException('Attempted to instantiate HOCR class without a valid HOCR file.');
+      throw new InvalidArgumentException('Attempted to instantiate the HOCR class without a valid HOCR file.');
     }
     $this->doc = new DOMDocument('1.0', 'UTF-8');
     $this->doc->load($file);

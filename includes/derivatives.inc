@@ -20,7 +20,7 @@ function islandora_ocr_create_ocr($image_file, array $options) {
   $command = "{$executable} {$image_file} {$image_file} -l {$options['language']} 2>&1";
   exec($command, $output, $ret);
   if ($ret != '0' || !file_exists($out_file)) {
-    $message = 'tesseract failed to create ocr<br/>Error: @ret<br/>Command: @command<br/>Output: !output';
+    $message = 'Tesseract failed to create OCR datastreams.<br/>Error: @ret<br/>Command: @command<br/>Output: !output';
     $variables = array(
       '@ret' => $ret,
       '@command' => $command,
@@ -52,7 +52,7 @@ function islandora_ocr_create_hocr($image_file, array $options) {
   $command = "{$executable} {$image_file} {$image_file} -l {$options['language']} hocr 2>&1";
   exec($command, $output, $ret);
   if ($ret != '0' || !file_exists($out_file)) {
-    $message = 'tesseract failed to create hocr<br/>Error: @ret<br/>Command: @command<br/>Output: !output';
+    $message = 'Tesseract failed to create HOCR datastreams.<br/>Error: @ret<br/>Command: @command<br/>Output: !output';
     $variables = array(
       '@ret' => $ret,
       '@command' => $command,
@@ -62,7 +62,7 @@ function islandora_ocr_create_hocr($image_file, array $options) {
     return FALSE;
   }
   if (!HOCR::isValid($out_file)) {
-    $message = 'tesseract failed to create valid hocr make sure to check your running a supported version of tesseract 3.2 or later.';
+    $message = 'Tesseract failed to create valid HOCR datastreams. Please ensure you are running a supported version of Tesseract (3.02.02 or later).';
     $message .= '<br/>Error: @ret<br/>Command: @command<br/>Output: !output';
     $variables = array(
       '@ret' => $ret,
@@ -203,7 +203,7 @@ function islandora_ocr_imagemagick_convert($src, $dest, $args) {
   $output = '';
   $ret = -1;
   if (_imagemagick_convert_exec($command, $output, $ret) !== TRUE) {
-    $message = 'ImageMagick convert failed to create derivative<br/>Error: @ret<br/>Command: @command<br/>Output: @output';
+    $message = 'ImageMagick failed to create any derivatives.<br/>Error: @ret<br/>Command: @command<br/>Output: @output';
     $variables = array('@ret' => $ret, '@command' => $command, '@output' => $output);
     watchdog('islandora_ocr', $message, $variables, WATCHDOG_ERROR);
     return FALSE;
