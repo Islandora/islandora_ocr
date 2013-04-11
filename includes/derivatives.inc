@@ -1,4 +1,8 @@
 <?php
+/**
+ * @file
+ * File to create derivatives with teseract
+ */
 
 /**
  * Generates a plain text OCR file, using the given options.
@@ -79,7 +83,7 @@ function islandora_ocr_create_hocr($image_file, array $options) {
  * Fetches the upload image file from Fedora, and saves it to a temp location.
  *
  * @param FedoraDatastream $datastream
- *  The object to fetch the uploaded image file from.
+ *   The object to fetch the uploaded image file from.
  *
  * @return string
  *   The file path to the temp file if successful, FALSE otherwise.
@@ -95,7 +99,7 @@ function islandora_ocr_get_uploaded_file(FedoraDatastream $datastream) {
 /**
  * Creates and adds the OCR, HOCR datastreams.
  *
- * @param FedoraDatastream $object
+ * @param FedoraDatastream $datastream
  *   The page datastream that the derivatives will be generated for.
  * @param array $options
  *   The options for tesseract.
@@ -110,8 +114,8 @@ function islandora_ocr_derive_datastreams(FedoraDatastream $datastream, array $o
   );
   $source_file = islandora_ocr_get_uploaded_file($datastream);
 
-  // Check the depth of the image, to see if it can be processed with Tesseract...
-  // If it can not, reduce the depth and grayscale it...
+  // Check the depth of the image, to see if it can be processed with
+  // tesseract. If it can not, reduce the depth and grayscale it.
   $identify = islandora_ocr_get_identify();
 
   $file = drupal_realpath($source_file);
@@ -163,10 +167,10 @@ function islandora_ocr_derive_datastreams(FedoraDatastream $datastream, array $o
  *   The command to run for "identify".
  */
 function islandora_ocr_get_identify() {
-  // Get path for convert
+  // Get path for convert.
   $convert = variable_get('imagemagick_convert', 'convert');
 
-  // Replace "convert" with "identify"
+  // Replace "convert" with "identify".
   $identify = str_replace('convert', 'identify', $convert);
 
   return $identify;
@@ -179,10 +183,10 @@ function islandora_ocr_get_identify() {
  *   The source file uri to convert from.
  * @param string $dest
  *   The destination file uri to convert into.
- * @param int $width
- *   The source file to convert from.
- * @param int $height
- *   The destination file to convert into.
+ * @param array $args
+ *   The arguements to pass to imagemagik
+ *
+ * @todo add better documentation for the args parameter
  *
  * @return string
  *   The destination file path if successful otherwise FALSE.
@@ -195,16 +199,19 @@ function islandora_ocr_imagemagick_convert($src, $dest, $args) {
     'destination' => $dest,
   );
   drupal_alter('imagemagick_arguments', $args, $context);
-  /**
-   * To make use of ImageMagick 6's parenthetical command grouping we need to make the $source image the first parameter and $dest the last.
-   * See http://www.imagemagick.org/Usage/basics/#cmdline
-   */
+  // To make use of ImageMagick 6's parenthetical command grouping we need to
+  // make the $source image the first parameter and $dest the last.
+  // See http://www.imagemagick.org/Usage/basics/#cmdline
   $command = escapeshellarg($src) . ' ' . implode(' ', $args) . ' ' . escapeshellarg($dest);
   $output = '';
   $ret = -1;
   if (_imagemagick_convert_exec($command, $output, $ret) !== TRUE) {
     $message = 'ImageMagick convert failed to create derivative<br/>Error: @ret<br/>Command: @command<br/>Output: @output';
-    $variables = array('@ret' => $ret, '@command' => $command, '@output' => $output);
+    $variables = array(
+      '@ret' => $ret,
+      '@command' => $command,
+      '@output' => $output,
+    );
     watchdog('islandora_ocr', $message, $variables, WATCHDOG_ERROR);
     return FALSE;
   }
@@ -250,4 +257,3 @@ function islandora_ocr_update_datastream(AbstractFedoraObject $object, $file, $d
   }
   return TRUE;
 }
-

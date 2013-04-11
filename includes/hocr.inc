@@ -351,7 +351,8 @@ class HOCR {
    * Generates a phrase matching predicates that will only match nodes.
    *
    * Takes the form of:
-   * [text() = 'term_1' and following::*[1..n][text() = 'term_2..n']]/preceding::node()[1]/following::[position() <= n]
+   * [text() = 'term_1' and following::*[1..n][text() = 
+   * 'term_2..n']]/preceding::node()[1]/following::[position() <= n]
    *
    * @param array $terms
    *   The phrase, assumed to be in order phrase.

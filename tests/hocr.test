@@ -50,7 +50,7 @@ class HOCRUnitTestCase extends DrupalWebTestCase {
       $this->pass('No exception thrown when valid file parameter given.');
     }
     catch(Exception $e) {
-      $this->fail('Exception thrown when valid file parameter given.  '. $file);
+      $this->fail('Exception thrown when valid file parameter given.  ' . $file);
     }
     // Expecting count(//*[text()='the' or text()='The']) == 9
     $results = $hocr->search('ThE');
