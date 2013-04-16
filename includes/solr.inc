@@ -79,7 +79,9 @@ function islandora_ocr_map_highlighted_solr_results_to_bounding_boxes($solr_resu
   foreach ($highlighted_documents as $pid => $highlighted_fields) {
     $object = islandora_object_load($pid);
     if ($object && isset($object['HOCR'])) {
-      $hocr = HOCR::fromDatastream($object['HOCR']);
+      $hocr = HOCR::fromDatastream($object['HOCR'], array(
+        'validate' => variable_get('islandora_ocr_validate_ocr_on_load', TRUE),
+      ));
       $results[$pid] = array(
         'page' => $hocr->getPageDimensions(),
         'snippets' => array(),
