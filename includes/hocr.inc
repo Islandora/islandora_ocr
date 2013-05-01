@@ -546,4 +546,41 @@ class HOCR {
     }
     return array('width' => $width, 'height' => $height);
   }
+
+  /**
+   * Strip the DOCTYPE declaration from the related HOCR.
+   *
+   * Fedora GSearch (or Java in general) does not handle (XML) entity
+   * resolution gracefully by default (tries to hit w3.org to retrieve DTDs)...
+   * Ideally, a functional entity resolver could be made to be used on the Java
+   * side; however, this seems like it would necessitate setting up the parser
+   * in a different way, which seems like a non-trivial change in GSearch.
+   * Alternatively, it seems like there should be a flag to change the HOCR
+   * tesseract outputs; however, reviewing the
+   * @link http://code.google.com/p/tesseract-ocr/source/browse/trunk/api/baseapi.cpp#830 source code @endlink
+   * reveals that it is highly unlikely that such a flag exists. Seems simpler
+   * just to wipe it.
+   */
+  public static function stripDoctype($hocr_string) {
+    // Wipe out the HTML DOCTYPE definition.
+    $doctype_regex = '/<!DOCTYPE\s+html.*?>\s+/si';
+
+    return preg_replace($doctype_regex, '', $hocr_string);
+  }
+
+  /**
+   * Strip the DOCTYPE declaration from a file containing HOCR.
+   *
+   * @see HOCR::stripDoctype()
+   */
+  public static function stripDoctypeFromFile($filename) {
+    $file = fopen($filename, 'r+');
+    if ($file) {
+      $stripped_content = self::stripDoctype(fread($file, filesize($filename)));
+      fseek($file, 0);
+      ftruncate($file, 0);
+      fwrite($file, $stripped_content);
+      fclose($file);
+    }
+  }
 }

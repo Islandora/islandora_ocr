@@ -39,7 +39,7 @@ class HOCRUnitTestCase extends DrupalWebTestCase {
       $hocr = new HOCR($file);
       $this->fail('InvalidArgumentException was not thrown when invalid file parameter given.');
     }
-    catch(InvalidArgumentException $e) {
+    catch (InvalidArgumentException $e) {
       $this->pass('InvalidArgumentException thrown when invalid file parameter given.');
     }
     // Test correct arguments do not throw.
@@ -49,13 +49,13 @@ class HOCRUnitTestCase extends DrupalWebTestCase {
       $hocr = new HOCR($file);
       $this->pass('No exception thrown when valid file parameter given.');
     }
-    catch(Exception $e) {
+    catch (Exception $e) {
       $this->fail('Exception thrown when valid file parameter given.  ' . $file);
     }
     // Expecting count(//*[text()='the' or text()='The']) == 9
     $results = $hocr->search('ThE');
     $this->assertEqual(count($results), 9, 'Default search was Case-insensitive search for "ThE", returned the expected number of results');
-    $classes = array_filter($results, function($o){return $o['class'] != 'ocrx_word';});
+    $classes = array_filter($results, function ($o) {return $o['class'] != 'ocrx_word';});
     $this->assertEqual(count($classes), 0, 'Default search only returned "ocrx_word" properties for "ThE".');
     // Expecting count(//*[text()='the']) == 5
     $results = $hocr->search('the', array('case_sensitive' => TRUE));
