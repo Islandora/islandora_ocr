@@ -574,6 +574,7 @@ class HOCR {
    * @see HOCR::stripDoctype()
    */
   public static function stripDoctypeFromFile($filename) {
+    $filename = drupal_realpath($filename);
     $file = fopen($filename, 'r+');
     if ($file) {
       $stripped_content = self::stripDoctype(fread($file, filesize($filename)));
