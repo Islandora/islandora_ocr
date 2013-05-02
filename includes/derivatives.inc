@@ -86,13 +86,13 @@ function islandora_ocr_create_hocr($image_file, array $options) {
 /**
  * Fetches the upload image file from Fedora, and saves it to a temp location.
  *
- * @param FedoraDatastream $datastream
+ * @param AbstractDatastream $datastream
  *   The object to fetch the uploaded image file from.
  *
  * @return string
  *   The file path to the temp file if successful, FALSE otherwise.
  */
-function islandora_ocr_get_uploaded_file(FedoraDatastream $datastream) {
+function islandora_ocr_get_uploaded_file(AbstractDatastream $datastream) {
   $mime_detector = new MimeDetect();
   $ext = $mime_detector->getExtension($datastream->mimeType);
   $filename = file_create_filename(str_replace(':', '_', "{$datastream->parent->id}_{$datastream->id}.{$ext}"), 'temporary://');
@@ -103,7 +103,7 @@ function islandora_ocr_get_uploaded_file(FedoraDatastream $datastream) {
 /**
  * Creates and adds the OCR, HOCR datastreams.
  *
- * @param FedoraDatastream $datastream
+ * @param AbstractDatastream $datastream
  *   The page datastream that the derivatives will be generated for.
  * @param array $options
  *   The options for tesseract.
@@ -111,7 +111,7 @@ function islandora_ocr_get_uploaded_file(FedoraDatastream $datastream) {
  * @return bool
  *   TRUE on success, FALSE otherwise.
  */
-function islandora_ocr_derive_datastreams(FedoraDatastream $datastream, array $options) {
+function islandora_ocr_derive_datastreams(AbstractDatastream $datastream, array $options) {
   module_load_include('inc', 'islandora_ocr', 'includes/utilities');
   $options += array(
     'language' => 'eng',
@@ -225,7 +225,7 @@ function islandora_ocr_imagemagick_convert($src, $dest, $args) {
 /**
  * Create/Update a datastream with the given parameters.
  *
- * @param AbstractFedoraObject $object
+ * @param AbstractObject $object
  *   The object to update.
  * @param string $file
  *   The absolute path to the file to use as content for the datastream.
@@ -242,7 +242,7 @@ function islandora_ocr_imagemagick_convert($src, $dest, $args) {
  * @return bool
  *   TRUE if successful, FALSE otherwise.
  */
-function islandora_ocr_update_datastream(AbstractFedoraObject $object, $file, $dsid, $label = NULL, $mimetype = NULL, $control_group = 'M', $copy = TRUE) {
+function islandora_ocr_update_datastream(AbstractObject $object, $file, $dsid, $label = NULL, $mimetype = NULL, $control_group = 'M', $copy = TRUE) {
   $mime_detector = new MimeDetect();
   if (empty($object[$dsid])) {
     $ds = $object->constructDatastream($dsid, $control_group);

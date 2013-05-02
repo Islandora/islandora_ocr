@@ -27,13 +27,13 @@ class HOCR {
   /**
    * Instantiates an HOCR object from the given datastream.
    *
-   * @param AbstractFedoraDatastream $datastream
+   * @param AbstractDatastream $datastream
    *   The datastream containing the HOCR file.
    *
    * @return HOCR
    *   An object of this class build from the given datastream.
    */
-  public static function fromDatastream(AbstractFedoraDatastream $datastream) {
+  public static function fromDatastream(AbstractDatastream $datastream) {
     $mime_detect = new MimeDetect();
     $ext = $mime_detect->getExtension($datastream->mimeType);
     $file = file_create_filename("{$datastream->parent->id}_{$datastream->id}.{$ext}", 'temporary://');
