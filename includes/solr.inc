@@ -76,16 +76,26 @@ function islandora_ocr_map_highlighted_solr_results_to_bounding_boxes($solr_resu
   );
   foreach ($solr_results['highlighting'] as $pid => $highlighted_fields) {
     $object = islandora_object_load($pid);
-    if (!$object || empty($object['HOCR'])) {
-      continue;
+    if ($object) {
+      if (isset($object['HOCR'])) {
+        $hocr = HOCR::fromDatastream($object['HOCR']);
+        $highlighted_words = islandora_ocr_map_highlighted_fields_to_words($hocr, $hocr_search_params, $highlighted_fields);
+        $snippets = islandora_ocr_map_highlighted_words_to_snippets($highlighted_words, $ignore_duplicate_snippets_results);
+        $results[$pid] = array(
+          'page' => $hocr->getPageDimensions(),
+          'snippets' => $snippets,
+        );
+      }
+      else {
+        $results[$pid] = array();
+        foreach ($highlighted_fields as $highlighted_field) {
+
+          foreach ($highlighted_field as $snippet) {
+            $results[$pid]['snippets'][$snippet] = array();
+          }
+        }
+      }
     }
-    $hocr = HOCR::fromDatastream($object['HOCR']);
-    $highlighted_words = islandora_ocr_map_highlighted_fields_to_words($hocr, $hocr_search_params, $highlighted_fields);
-    $snippets = islandora_ocr_map_highlighted_words_to_snippets($highlighted_words, $ignore_duplicate_snippets_results);
-    $results[$pid] = array(
-      'page' => $hocr->getPageDimensions(),
-      'snippets' => $snippets,
-    );
   }
   return $results;
 }
