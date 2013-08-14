@@ -34,7 +34,7 @@ function islandora_ocr_admin_settings_form(array $form, array &$form_state) {
         '#type' => 'textfield',
         '#title' => t('Tesseract'),
         '#description' => t('Tesseract is used to generate the OCR and coordinate data.<br/>!msg', array(
-                          '!msg' => islandora_executable_available_message($tesseract, $version, TESSERACT_REQUIRED_VERSION))),
+                          '!msg' => islandora_executable_available_message($tesseract, $version, ISLANDORA_OCR_TESSERACT_REQUIRED_VERSION))),
         '#default_value' => $tesseract,
         '#ajax' => array(
           'callback' => 'islandora_ocr_admin_settings_form_ajax_callback',

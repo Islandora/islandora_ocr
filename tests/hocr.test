@@ -55,7 +55,10 @@ class HOCRUnitTestCase extends DrupalWebTestCase {
     // Expecting count(//*[text()='the' or text()='The']) == 9
     $results = $hocr->search('ThE');
     $this->assertEqual(count($results), 9, 'Default search was case-insensitive; search for "ThE" returned expected number of results');
-    $classes = array_filter($results, function ($o) {return $o['class'] != 'ocrx_word';});
+    $filter = function ($o) {
+      return $o['class'] != 'ocrx_word';
+    };
+    $classes = array_filter($results, $filter);
     $this->assertEqual(count($classes), 0, 'Default search only returned "ocrx_word" properties for "ThE".');
     // Expecting count(//*[text()='the']) == 5
     $results = $hocr->search('the', array('case_sensitive' => TRUE));

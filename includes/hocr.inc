@@ -58,7 +58,7 @@ class HOCR {
   public static function isValid($file) {
     if (file_exists($file)) {
       $version = self::getVersion($file);
-      return version_compare($version, TESSERACT_REQUIRED_VERSION) >= 0;
+      return version_compare($version, ISLANDORA_OCR_TESSERACT_REQUIRED_VERSION) >= 0;
     }
     return FALSE;
   }
@@ -451,7 +451,10 @@ class HOCR {
    */
   protected function getClassQueryPredicate($classes) {
     $classes = is_array($classes) ? $classes : array($classes);
-    $classes = array_map(function($class) {return "@class = '{$class}'";}, $classes);
+    $map = function($class) {
+      return "@class = '{$class}'";
+    };
+    $classes = array_map($map, $classes);
     $predicate = implode(' or ', $classes);
     return "[$predicate]";
   }

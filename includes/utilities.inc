@@ -13,7 +13,7 @@
  */
 function islandora_ocr_can_derive_ocr() {
   $version = islandora_ocr_get_tesseract_version();
-  return version_compare($version, TESSERACT_REQUIRED_VERSION) >= 0;
+  return version_compare($version, ISLANDORA_OCR_TESSERACT_REQUIRED_VERSION) >= 0;
 }
 
 /**
