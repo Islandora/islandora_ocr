@@ -162,6 +162,151 @@ function islandora_ocr_derive_datastreams(AbstractDatastream $datastream, array 
 }
 
 /**
+ * Get an OCRable version of the given image datastream.
+ *
+ * @param AbstractDatastream $datastream
+ *   An image datastream we want to OCR.
+ *
+ * @return string
+ *   A path to the converted image... Delete it after you're done.
+ */
+function islandora_ocr_get_converted_source(AbstractDatastream $datastream) {
+  module_load_include('inc', 'islandora_ocr', 'includes/utilities');
+  $source_file = islandora_ocr_get_uploaded_file($datastream);
+
+  // Check the depth of the image, to see if it can be processed with
+  // tesseract. If it can not, reduce the depth and grayscale it.
+  $identify = islandora_ocr_get_identify();
+
+  $file = drupal_realpath($source_file);
+
+  $depth = intval(exec(escapeshellcmd("$identify -format \"%z\" $file")));
+  $codec = strtolower(exec(escapeshellcmd("$identify -format \"%m\" $file")));
+
+  // XXX: Likely an incomplete list... Cursory search didn't turn up a full
+  // list.
+  $supported_codecs = array(
+    'jpeg',
+    'tiff',
+    'png',
+  );
+
+  if ($depth > 8 || !in_array($codec, $supported_codecs)) {
+    $c_dest = file_create_filename(drupal_basename($source_file) . ".tif", 'temporary://');
+
+    $c_args = array(
+      '-colorspace Gray',
+      '-depth 8',
+      '-compress None',
+    );
+
+    $old_source = $source_file;
+    $source_file = islandora_ocr_imagemagick_convert($source_file, $c_dest, $c_args);
+    drupal_unlink($old_source);
+  }
+
+  return $source_file;
+}
+
+/**
+ * Derive the OCR stream from OBJ.
+ */
+function islandora_ocr_derive_ocr(AbstractObject $object, $force = FALSE) {
+  // Logic for OCR generation from islandora_book_batch.
+  $generate_ocr = 'TRUE';
+  $batch_ocr = $object->relationships->get(ISLANDORA_RELS_EXT_URI, 'generate_ocr');
+  if ($batch_ocr) {
+    $generate_ocr = $batch_ocr[0]['object']['value'];
+  }
+
+  if ($generate_ocr == 'TRUE' && ($force || !isset($object['OCR']))) {
+    $to_return = array(
+      'success' => FALSE,
+      'messages' => array(),
+    );
+
+    $datastream = $object['OBJ'];
+    $file = islandora_ocr_get_converted_source($datastream);
+    $ocr_file = islandora_ocr_create_ocr($file, array('language' => 'eng'));
+    if ($ocr_file && islandora_ocr_update_datastream($object, $ocr_file, 'OCR')) {
+      $to_return['success'] = TRUE;
+      $to_return['messages'][] = array(
+        'message' => t('Added @dsid to @id.'),
+        'message_sub' => array(
+          '@dsid' => 'OCR',
+          '@id' => $object->id,
+        ),
+        'type' => 'dsm',
+        'severity' => 'status',
+      );
+    }
+    else {
+      $to_return['messages'][] = array(
+        'message' => t('Failed to generate @dest_dsid from @src_dsid for @id.'),
+        'message_sub' => array(
+          '@dest_dsid' => 'OCR',
+          '@src_dsid' => 'OBJ',
+          '@id' => $object->id,
+        ),
+        'type' => 'watchdog',
+        'severity' => WATCHDOG_ERROR,
+      );
+    }
+
+    return $to_return;
+  }
+}
+
+/**
+ * Derive the HOCR stream from OBJ.
+ */
+function islandora_ocr_derive_hocr(AbstractObject $object, $force = FALSE) {
+  // Logic for OCR generation from islandora_book_batch.
+  $generate_ocr = 'TRUE';
+  $batch_ocr = $object->relationships->get(ISLANDORA_RELS_EXT_URI, 'generate_ocr');
+  if ($batch_ocr) {
+    $generate_ocr = $batch_ocr[0]['object']['value'];
+  }
+
+  if ($generate_ocr == 'TRUE' && ($force || !isset($object['HOCR']))) {
+    $to_return = array(
+      'success' => FALSE,
+      'messages' => array(),
+    );
+
+    $datastream = $object['OBJ'];
+    $file = islandora_ocr_get_converted_source($datastream);
+    $ocr_file = islandora_ocr_create_hocr($file, array('language' => 'eng'));
+    if ($ocr_file && islandora_ocr_update_datastream($object, $ocr_file, 'HOCR')) {
+      $to_return['success'] = TRUE;
+      $to_return['messages'][] = array(
+        'message' => t('Added @dsid to @id.'),
+        'message_sub' => array(
+          '@dsid' => 'HOCR',
+          '@id' => $object->id,
+        ),
+        'type' => 'dsm',
+        'severity' => 'status',
+      );
+    }
+    else {
+      $to_return['messages'][] = array(
+        'message' => t('Failed to generate @dest_dsid from @src_dsid for @id.'),
+        'message_sub' => array(
+          '@dest_dsid' => 'OCR',
+          '@src_dsid' => 'OBJ',
+          '@id' => $object->id,
+        ),
+        'type' => 'watchdog',
+        'severity' => WATCHDOG_ERROR,
+      );
+    }
+
+    return $to_return;
+  }
+}
+
+/**
  * Attempt to get the "identify" executable...
  *
  * Assume convert is sanely named, and that identify can be obtained from the
