@@ -32,7 +32,7 @@ function islandora_ocr_highlighted_solr_search($query, $offset = 0, $limit = -1,
   // Our settings... We add in the original, items at the end.
   $params = array(
     'hl' => 'true',
-    'qt' => variable_get('islandora_solr_request_handler', 'standard'),
+    'qt' => (variable_get('islandora_solr_request_handler', 'standard') ? variable_get('islandora_solr_request_handler', 'standard') : ''),
     'hl.fl' => variable_get('islandora_ocr_solr_hocr_highlighting_field', 'text_nodes_HOCR_hlt'),
     'hl.useFastVectorHighlighter' => variable_get('islandora_ocr_solr_hocr_highlighting_use_fast', TRUE) ? 'true' : 'false',
     // XXX: Could end up with a large fragment size with fielded
