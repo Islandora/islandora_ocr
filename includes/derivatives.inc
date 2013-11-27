@@ -101,6 +101,44 @@ function islandora_ocr_get_uploaded_file(AbstractDatastream $datastream) {
 }
 
 /**
+ * Creates the TIFF derived from a JP2 datastream.
+ *
+ * @param AbstractDatastream $datastream
+ *  The object to fetch the uploaded image file from.
+ *
+ * @return string
+ *   The file path to the TIFF Drupal temp file if successful, FALSE otherwise.
+ */
+
+function islandora_ocr_create_tiff_file(AbstractDatastream $datastream) {
+  // Get the TIFF datastream
+  $jp2_file = islandora_ocr_get_uploaded_file($datastream);
+
+  // create JP2 with kakadu
+  module_load_include('inc', 'islandora_large_image', 'includes/utilities');
+  $kakadu = variable_get('islandora_use_kakadu', !islandora_large_image_check_imagemagick_for_jpeg2000());
+  $base_name = str_replace(':', '_', "{$datastream->parent->id}_{$datastream->id}");
+
+  if ($kakadu) {
+    $derivative_file = islandora_large_image_kdu_expand($jp2_file, "temporary://{$base_name}_TIFF.tiff"); // Create TIFF
+    if (!$derivative_file) {
+      drupal_set_message(t("Kakadu failed. Trying ImageMagick ..."));
+      $kakadu = FALSE; //forces retry with ImageMagick if Kakadu has failed
+    }
+  }
+  if (!$kakadu) {
+    $derivative_file = islandora_large_image_imagemagick_convert($jp2_file, "temporary://{$base_name}_TIFF.tiff", islandora_large_image_get_args());
+  }
+  if ($derivative_file === FALSE) {
+    drupal_set_message(t('Failed to create TIFF derivative'), 'error');
+    return FALSE;
+  }
+  return $derivative_file;
+}
+
+
+
+/**
  * Creates and adds the OCR, HOCR datastreams.
  *
  * @param AbstractDatastream $datastream
@@ -116,7 +154,21 @@ function islandora_ocr_derive_datastreams(AbstractDatastream $datastream, array 
   $options += array(
     'language' => 'eng',
   );
-  $source_file = islandora_ocr_get_uploaded_file($datastream);
+
+  if ($datastream->mimetype === "image/jp2") {
+    $source_file = islandora_ocr_create_tiff_file($datastream);
+  } else {
+    $source_file = islandora_ocr_get_uploaded_file($datastream);
+  }
+
+  if ($source_file == FALSE) {
+    $message = 'Could not get a TIFF file to convert.<br/>DSID: @dsid';
+    $variables = array(
+      '@dsid' => $datastream->id,
+    );
+    watchdog('islandora_ocr', $message, $variables, WATCHDOG_ERROR);
+    return FALSE;
+  }
 
   // Check the depth of the image, to see if it can be processed with
   // tesseract. If it can not, reduce the depth and grayscale it.
