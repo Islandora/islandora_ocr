@@ -1,3 +1,4 @@
+sudo: required
 language: php
 php:
   - 5.3.3
@@ -22,9 +23,12 @@ before_install:
   - cd $HOME/drupal-*
   - ln -s $TRAVIS_BUILD_DIR sites/all/modules/islandora_ocr
   - drush en --yes islandora_ocr
+before_script:
+  # Mysql might time out for long tests, increase the wait timeout.
+  - mysql -e 'SET @@GLOBAL.wait_timeout=1200'
 script:
   - ant -buildfile sites/all/modules/islandora_ocr/build.xml lint
   - $ISLANDORA_DIR/tests/scripts/line_endings.sh sites/all/modules/islandora_ocr
   - drush coder-review --reviews=production,security,style,i18n,potx,sniffer islandora_ocr
   - phpcpd --names *.module,*.inc,*.test sites/all/modules/islandora_ocr
-  - drush test-run --uri=http://localhost:8081 "Islandora OCR"
+  - php scripts/run-tests.sh --php `phpenv which php` --url http://localhost:8081 --verbose "Islandora OCR"
