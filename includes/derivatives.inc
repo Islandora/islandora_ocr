@@ -447,21 +447,25 @@ function islandora_ocr_imagemagick_convert($src, $dest, $args) {
  */
 function islandora_ocr_update_datastream(AbstractObject $object, $file, $dsid, $label = NULL, $mimetype = NULL, $control_group = 'M', $copy = TRUE) {
   $mime_detector = new MimeDetect();
-  if (empty($object[$dsid])) {
+  $ingest = !isset($object[$dsid]);
+  if ($ingest) {
     $ds = $object->constructDatastream($dsid, $control_group);
   }
   else {
     $ds = $object[$dsid];
   }
   $ds->setContentFromFile($file, $copy);
-  $ds->label = isset($label) ? $label : $dsid;
-  if (isset($mimetype)) {
+  $label = isset($label) ? $label : $dsid;
+  if ($ds->label != $label) {
+    $ds->label = $label;
+  }
+  $mimetype = isset($mimetype) ? $mimetype : $mime_detector->getMimetype($file);
+  if ($ds->mimetype != $mimetype) {
     $ds->mimetype = $mimetype;
   }
-  else {
-    $ds->mimetype = $mime_detector->getMimetype($file);
+  if ($ingest) {
+    $object->ingestDatastream($ds);
   }
-  $object->ingestDatastream($ds);
   file_unmanaged_delete($file);
   return TRUE;
 }
