@@ -305,14 +305,14 @@ function islandora_ocr_derive_ocr(AbstractObject $object, $force = FALSE) {
  */
 function islandora_ocr_derive_hocr(AbstractObject $object, $force = FALSE) {
   $language_array = $object->relationships->get(ISLANDORA_RELS_EXT_URI, 'hasLanguage');
-  // Logic for OCR generation from islandora_book_batch.
-  $generate_ocr = 'TRUE';
-  $batch_ocr = $object->relationships->get(ISLANDORA_RELS_EXT_URI, 'generate_ocr');
-  if ($batch_ocr) {
-    $generate_ocr = $batch_ocr[0]['object']['value'];
+  // Logic for HOCR generation from islandora_book_batch.
+  $generate_hocr = 'TRUE';
+  $batch_hocr = $object->relationships->get(ISLANDORA_RELS_EXT_URI, 'generate_hocr');
+  if ($batch_hocr) {
+    $generate_hocr = $batch_hocr[0]['object']['value'];
   }
   $language = isset($language_array[0]['object']['value']) ? $language_array[0]['object']['value'] : 'eng';
-  if ($language == 'no_ocr' || $generate_ocr == 'FALSE') {
+  if ($language == 'no_ocr' || $generate_hocr == 'FALSE') {
     $to_return['success'] = TRUE;
     $to_return['messages'][] = array(
       'message' => t('Skipped adding @dsid to @id.'),
@@ -325,7 +325,7 @@ function islandora_ocr_derive_hocr(AbstractObject $object, $force = FALSE) {
     );
     return $to_return;
   }
-  if ($generate_ocr == 'TRUE' && ($force || !isset($object['HOCR']))) {
+  if ($generate_hocr == 'TRUE' && ($force || !isset($object['HOCR']))) {
     $to_return = array(
       'success' => FALSE,
       'messages' => array(),
@@ -360,7 +360,6 @@ function islandora_ocr_derive_hocr(AbstractObject $object, $force = FALSE) {
     }
     // Clean up.
     file_unmanaged_delete($file);
-    islandora_ocr_remove_generate_ocr_rels_ext_statement($object);
     return $to_return;
   }
 }
@@ -485,4 +484,29 @@ function islandora_ocr_remove_generate_ocr_rels_ext_statement(AbstractObject $ob
 function islandora_ocr_set_generate_ocr_rels_ext_statement(AbstractObject $object, $generate_ocr = TRUE) {
   $generate_ocr = $generate_ocr ? 'TRUE' : 'FALSE';
   $object->relationships->add(ISLANDORA_RELS_EXT_URI, 'generate_ocr', $generate_ocr, RELS_TYPE_PLAIN_LITERAL);
+}
+
+/**
+ * Remove the generate_hoct field if present in the RELS-EXT.
+ */
+function islandora_ocr_remove_generate_hocr_rels_ext_statement(AbstractObject $object) {
+  if ($object->relationships->get(ISLANDORA_RELS_EXT_URI, 'generate_hocr', '', RELS_TYPE_PLAIN_LITERAL)) {
+    $object->relationships->remove(ISLANDORA_RELS_EXT_URI, 'generate_hocr', '', RELS_TYPE_PLAIN_LITERAL);
+  }
+}
+
+/**
+ * Set the generate_hocr relation in the RELS-EXT.
+ */
+function islandora_ocr_set_generate_hocr_rels_ext_statement(AbstractObject $object, $generate_hocr = TRUE) {
+  $generate_hocr = $generate_hocr ? 'TRUE' : 'FALSE';
+  $object->relationships->add(ISLANDORA_RELS_EXT_URI, 'generate_hocr', $generate_hocr, RELS_TYPE_PLAIN_LITERAL);
+}
+
+/**
+ * Helper to set both the OCR/HOCR generation RELS-EXT statements.
+ */
+function islandora_ocr_set_generating_rels_ext_statements(AbstractObject $object, $generate_ocr = TRUE, $generate_hocr = TRUE) {
+  islandora_ocr_set_generate_ocr_rels_ext_statement($object, (bool) $generate_ocr);
+  islandora_ocr_set_generate_hocr_rels_ext_statement($object, (bool) $generate_hocr);
 }

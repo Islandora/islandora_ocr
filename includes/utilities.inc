@@ -124,3 +124,31 @@ function islandora_ocr_get_enabled_tesseract_languages() {
   $enabled_languages = array_filter(variable_get('islandora_ocr_tesseract_enabled_languages', drupal_map_assoc($installed_languages)));
   return array_merge(drupal_map_assoc($enabled_languages, 'islandora_ocr_tesseract_language_name'), array('no_ocr' => t('Do not perform OCR')));
 }
+
+/**
+ * Gets a fieldset for controls to ignore OCR derivatives.
+ *
+ * @return array
+ *   A fieldset containing some markup and two checkboxes (for ignoring OCR and
+ *   HOCR).
+ */
+function islandora_ocr_get_ignored_derivatives_fieldset() {
+  return array(
+    '#type' => 'fieldset',
+    '#title' => t('Ignored OCR Derivatives'),
+    '#collapsible' => FALSE,
+    'markup' => array(
+      '#markup' => t('Individual OCR/HOCR derivatives can be ignored on new pages in cases where OCR/HOCR generation is known to be undesired (e.g., illustrations, handwritten text)'),
+    ),
+    'ignore_ocr' => array(
+      '#type' => 'checkbox',
+      '#title' => t('Ignore OCR Generation'),
+      '#default_value' => FALSE,
+    ),
+    'ignore_hocr' => array(
+      '#type' => 'checkbox',
+      '#title' => t('Ignore HOCR Generation'),
+      '#default_value' => FALSE,
+    ),
+  );
+}
