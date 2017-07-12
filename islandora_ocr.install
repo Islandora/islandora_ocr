@@ -51,8 +51,8 @@ function islandora_ocr_cleanup_derivatives() {
 /**
  * Update hook to apply generate_hocr flags.
  *
- * Items that currently generate OCR and HOCR would suddenly stop generating OCR
- * with this update, so batch update them to do so.
+ * Items that currently generate OCR and HOCR would suddenly stop generating
+ * HOCR with this update, so batch update them to do so.
  */
 function islandora_ocr_update_7001(&$sandbox) {
   // XXX: Standard paranoia.
