@@ -12,6 +12,7 @@ function islandora_ocr_uninstall() {
   $variables = array(
     'islandora_ocr_tesseract',
     'islandora_ocr_tesseract_enabled_languages',
+    ISLANDORA_OCR_UPDATE_7001_TIMESTAMP,
   );
   array_walk($variables, 'variable_del');
   islandora_ocr_cleanup_derivatives();
@@ -49,115 +50,16 @@ function islandora_ocr_cleanup_derivatives() {
 }
 
 /**
- * Update hook to apply generate_hocr flags.
+ * Update hook to add the current ISO-8601 timestamp to the variable list.
  *
- * Items that currently generate OCR and HOCR would suddenly stop generating
- * HOCR with this update, so batch update them to do so.
+ * Objects with the generate_ocr flag that are older than this timestamp will
+ * be considered to also have a matching generate_hocr flag, mimicing previous
+ * functionality.
  */
 function islandora_ocr_update_7001(&$sandbox) {
-  // XXX: Standard paranoia.
-  drupal_static_reset('islandora_get_tuque_connection');
-  $conn = islandora_get_tuque_connection();
-  if (empty($sandbox)) {
-    $sandbox['total'] = islandora_ocr_update_get_generate_ocr_flag_count($conn);
-    if (!$sandbox['total']) {
-      $sandbox['finished'] = 1;
-      $t = get_t();
-      return $t('No items with generate_ocr flags; nothing to update.');
-    }
-    $sandbox['current'] = 0;
-  }
-
-  // Get 100 items. Using $sandbox['current'] instead of our standard slicing as
-  // this is in an update hook and the site therefore should not be being messed
-  // with at this time.
-  $slice = islandora_ocr_update_get_generate_ocr_items($conn, $sandbox['current']);
-  if (empty($slice)) {
-    $t = get_t();
-    $sandbox['finished'] = 1;
-    return $t('Updated @count items with generate_ocr flags.', array(
-      '@count' => $sandbox['current'],
-    ));
-  }
-  // Loop through e'm.
-  foreach ($slice as $item) {
-    $sandbox['current']++;
-    $object = islandora_object_load($item['pid']['value']);
-    if ($object) {
-      // Get the generate_ocr value and use it to set the generate_hocr value.
-      $current = $object->relationships->get(ISLANDORA_RELS_EXT_URI, 'generate_ocr', NULL, RELS_TYPE_PLAIN_LITERAL);
-      if (!empty($current)) {
-        $object->relationships->add(ISLANDORA_RELS_EXT_URI, 'generate_hocr', $current[0]['object']['value'], RELS_TYPE_PLAIN_LITERAL);
-      }
-      else {
-        watchdog('islandora_ocr',
-          'Failed to get generate_ocr flag value from @object',
-          array('@object' => $object->id),
-          WATCHDOG_WARNING);
-      }
-    }
-    else {
-      watchdog('islandora_ocr',
-        'Failed to load @object',
-        array('@object' => $item['pid']['value']),
-        WATCHDOG_WARNING);
-    }
-  }
-  // Determine if we're finished.
-  $sandbox['finished'] = (int) floor($sandbox['current'] / $sandbox['total']);
-  $t = get_t();
-  if ($sandbox['finished']) {
-    return $t('Updated @count items with generate_ocr flags.', array(
-      '@count' => $sandbox['total'],
-    ));
-  }
-  else {
-    return $t('@current/@count items updated.', array(
-      '@current' => $sandbox['current'],
-      '@count' => $sandbox['total'],
-    ));
-  }
-}
-
-/**
- * Gets the number of items in the repository with 'generate_ocr' flags.
- *
- * @param IslandoraTuque $conn
- *   Connection to Fedora.
- *
- * @return int
- *   The number of generate_ocr flags in the repo.
- */
-function islandora_ocr_update_get_generate_ocr_flag_count(IslandoraTuque $conn) {
-  $query = <<<EOQ
-SELECT ?pid
-FROM <#ri>
-WHERE {
-  ?pid <http://islandora.ca/ontology/relsext#generate_ocr> ?value .
-}
-EOQ;
-  return $conn->repository->ri->countQuery($query, 'sparql');
-}
-
-/**
- * Gets a chunk of up to 100 items with the generate_ocr flag.
- *
- * @param IslandoraTuque $conn
- *   Connection to Fedora.
- * @param int $offset
- *   Slicing parameter to get the offset.
- *
- * @return array
- *   An array of items to be updated.
- */
-function islandora_ocr_update_get_generate_ocr_items(IslandoraTuque $conn, $offset) {
-  $query = <<<EOQ
-SELECT ?pid
-FROM <#ri>
-WHERE {
-  ?pid <http://islandora.ca/ontology/relsext#generate_ocr> ?value .
-}
-OFFSET $offset
-EOQ;
-  return $conn->repository->ri->sparqlQuery($query, 100);
+  $timestamp = date_iso8601(time());
+  variable_set(ISLANDORA_OCR_UPDATE_7001_TIMESTAMP, $timestamp);
+  return t("Timestamp set to @timestamp", array(
+    '@timestamp' => $timestamp,
+  ));
 }
