@@ -47,7 +47,7 @@ Each text node of each element in the HOCR datastream must be placed in order in
 
 Any objects that were previously ingested but require this functionality will need to be re-indexed.
 
-[Reference Implementation](https://github.com/discoverygarden/basic-solr-config/blob/modular/islandora_transforms/XML_text_nodes_to_solr.xslt)
+[Reference Implementation](https://github.com/discoverygarden/islandora_transforms/blob/master/XML_text_nodes_to_solr.xslt)
 
 
 ### Tesseract
