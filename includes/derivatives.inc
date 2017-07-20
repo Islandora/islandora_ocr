@@ -241,9 +241,6 @@ function islandora_ocr_get_converted_source(AbstractDatastream $datastream) {
  *
  * @param string $type
  *   Either "OCR" or "HOCR".
- * @param string $rels_flag
- *   String literal flag in the RELS-EXT to use to determine whether or not we
- *   should proceed with derivative generation.
  * @param AbstractObject $object
  *   The object on which to derive a datastream.
  * @param bool $force
@@ -255,17 +252,45 @@ function islandora_ocr_get_converted_source(AbstractDatastream $datastream) {
  * @return array
  *   A derivative success/fail structured array.
  */
-function islandora_ocr_derive_datastream($type, $rels_flag, AbstractObject $object, $force = FALSE) {
-  if (!in_array($type, array('OCR', 'HOCR'))) {
+function islandora_ocr_derive_datastream($type, AbstractObject $object, $force = FALSE) {
+  // Type-dependent information.
+  $dsid_map = array(
+    'HOCR' => array(
+      'generation_callback' => 'islandora_ocr_create_hocr',
+      'flag' => ISLANDORA_OCR_GENERATE_HOCR_RELS_STATEMENT,
+    ),
+    'OCR' => array(
+      'generation_callback' => 'islandora_ocr_create_ocr',
+      'flag' => ISLANDORA_OCR_GENERATE_OCR_RELS_STATEMENT,
+    ),
+  );
+  // Bail if $type is invalid.
+  if (!isset($dsid_map[$type])) {
     throw new InvalidArgumentException(t('Invalid OCR datastream type "@type"', array(
       '@type' => $type,
     )));
   }
   $language_array = $object->relationships->get(ISLANDORA_RELS_EXT_URI, 'hasLanguage');
   $language = isset($language_array[0]['object']['value']) ? $language_array[0]['object']['value'] : 'eng';
-  $lc_type = strtolower($type);
   $generate_datastream = 'TRUE';
-  $batch = $object->relationships->get(ISLANDORA_RELS_EXT_URI, $rels_flag);
+  // If this object is older than the time this module was updated to 7001, we
+  // want to use the OCR flag instead of the HOCR flag to determine if we should
+  // derive. If no update was required, no check is either.
+  if ($timestamp = variable_get(ISLANDORA_OCR_UPDATE_7001_TIMESTAMP, FALSE)) {
+    $diff = date_diff(new DateTime($timestamp), $object->createdDate);
+    // Negative diffs indicate an object created before the timestamp.
+    if ($diff->invert) {
+      $rels = $object->relationships;
+      $initial_autocommit = $rels->autoCommit;
+      foreach ($rels->get(ISLANDORA_RELS_EXT_URI, ISLANDORA_OCR_GENERATE_OCR_RELS_STATEMENT) as $results) {
+        $rels->autoCommit = FALSE;
+        $rels->add(ISLANDORA_RELS_EXT_URI, ISLANDORA_OCR_GENERATE_HOCR_RELS_STATEMENT, $result['object']['value'], RELS_TYPE_PLAIN_LITERAL);
+      }
+      $rels->autoCommit = $initial_autocommit;
+    }
+  }
+  // Determine if we should generate.
+  $batch = $object->relationships->get(ISLANDORA_RELS_EXT_URI, $dsid_map[$type]['flag']);
   if ($batch) {
     $generate_datastream = $batch[0]['object']['value'];
   }
@@ -294,7 +319,7 @@ function islandora_ocr_derive_datastream($type, $rels_flag, AbstractObject $obje
 
     $datastream = $object['OBJ'];
     $file = islandora_ocr_get_converted_source($datastream);
-    $derivative_file = call_user_func_array("islandora_ocr_create_{$lc_type}", array($file, array('language' => $language)));
+    $derivative_file = call_user_func_array($map[$type]['generate_callback'], array($file, array('language' => $language)));
     if ($derivative_file && islandora_ocr_update_datastream($object, $derivative_file, $type)) {
       $to_return['success'] = TRUE;
       $to_return['messages'][] = array(
@@ -320,7 +345,7 @@ function islandora_ocr_derive_datastream($type, $rels_flag, AbstractObject $obje
       );
     }
     file_unmanaged_delete($file);
-    call_user_func_array("islandora_ocr_remove_generate_{$lc_type}_rels_ext_statement", array($object));
+    _islandora_ocr_remove_generating_rels_ext_statement($object, $map[$type]['flag'])
     return $to_return;
   }
 }
@@ -336,9 +361,7 @@ function islandora_ocr_derive_ocr(AbstractObject $object, $force = FALSE) {
  * Derive the HOCR stream from OBJ.
  */
 function islandora_ocr_derive_hocr(AbstractObject $object, $force = FALSE) {
-  // If this object is older than the time this module was updated to 7001, we
-  // want to use the OCR flag instead of the HOCR flag to determine if we should
-  // derive. If no update was required, no check is either.
+
   $timestamp = variable_get(ISLANDORA_OCR_UPDATE_7001_TIMESTAMP, NULL);
   if (!isset($timestamp)) {
     $flag = ISLANDORA_OCR_GENERATE_HOCR_RELS_STATEMENT;
@@ -462,6 +485,9 @@ function islandora_ocr_update_datastream(AbstractObject $object, $file, $dsid, $
  * Remove the generate_ocr field if present in the RELS-EXT.
  */
 function islandora_ocr_remove_generate_ocr_rels_ext_statement(AbstractObject $object) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $message = filter_xss(islandora_deprecated('7.x-1.10', t('In the future, OCR-generating RELS-EXT statements should be removed using _islandora_ocr_remove_generating_rels_ext_statement().')));
+  trigger_error($message, E_USER_DEPRECATED);
   if ($object->relationships->get(ISLANDORA_RELS_EXT_URI, ISLANDORA_OCR_GENERATE_OCR_RELS_STATEMENT, NULL, RELS_TYPE_PLAIN_LITERAL)) {
     $object->relationships->remove(ISLANDORA_RELS_EXT_URI, ISLANDORA_OCR_GENERATE_OCR_RELS_STATEMENT, NULL, RELS_TYPE_PLAIN_LITERAL);
   }
@@ -479,23 +505,17 @@ function islandora_ocr_set_generate_ocr_rels_ext_statement(AbstractObject $objec
 }
 
 /**
- * Remove the generate_hoct field if present in the RELS-EXT.
+ * Helper to remove OCR/HOCR generation RELS-EXT statements.
+ *
+ * @param AbstractObject $object
+ *   The object to remove relationships from.
+ * @param string $flag
+ *   The flag to remove.
  */
-function islandora_ocr_remove_generate_hocr_rels_ext_statement(AbstractObject $object) {
-  if ($object->relationships->get(ISLANDORA_RELS_EXT_URI, ISLANDORA_OCR_GENERATE_HOCR_RELS_STATEMENT, NULL, RELS_TYPE_PLAIN_LITERAL)) {
-    $object->relationships->remove(ISLANDORA_RELS_EXT_URI, ISLANDORA_OCR_GENERATE_HOCR_RELS_STATEMENT, NULL, RELS_TYPE_PLAIN_LITERAL);
+function _islandora_ocr_remove_generating_rels_ext_statement(AbstractObject $object, $flag) {
+  if ($object->relationships->get(ISLANDORA_RELS_EXT_URI, $flag, NULL, RELS_TYPE_PLAIN_LITERAL)) {
+    $object->relationships->remove(ISLANDORA_RELS_EXT_URI, $flag, NULL, RELS_TYPE_PLAIN_LITERAL);
   }
-}
-
-/**
- * Set the generate_hocr relation in the RELS-EXT.
- */
-function islandora_ocr_set_generate_hocr_rels_ext_statement(AbstractObject $object, $generate_hocr = TRUE) {
-  module_load_include('inc', 'islandora', 'includes/utilities');
-  $message = filter_xss(islandora_deprecated('7.x-1.10', t('In the future, HOCR-generating RELS-EXT statements should be set together using islandora_ocr_set_generating_rels_ext_statements().')));
-  trigger_error($message, E_USER_DEPRECATED);
-  $generate_hocr = $generate_hocr ? 'TRUE' : 'FALSE';
-  $object->relationships->add(ISLANDORA_RELS_EXT_URI, ISLANDORA_OCR_GENERATE_HOCR_RELS_STATEMENT, $generate_hocr, RELS_TYPE_PLAIN_LITERAL);
 }
 
 /**
@@ -513,14 +533,17 @@ function islandora_ocr_set_generate_hocr_rels_ext_statement(AbstractObject $obje
 function islandora_ocr_set_generating_rels_ext_statements(AbstractObject $object, $generate_ocr = NULL, $generate_hocr = NULL) {
   $map_to_string_literal = function ($bool) {
     return $bool ? 'TRUE' : 'FALSE';
-  }
+  };
   $statements = array(
     ISLANDORA_OCR_GENERATE_OCR_RELS_STATEMENT => $generate_ocr,
     ISLANDORA_OCR_GENERATE_HOCR_RELS_STATEMENT => $generate_hocr,
   );
+  $previous_autocommit = $object->relationships->autoCommit;
+  $object->relationships->autoCommit = FALSE;
   foreach ($statements as $predicate => $bool) {
     if (!is_null($object)) {
       $object->relationships->add(ISLANDORA_RELS_EXT_URI, $predicate, $map_to_string_literal($bool), RELS_TYPE_PLAIN_LITERAL);
     }
   }
+  $object->relationships->autoCommit = $previous_autocommit;
 }

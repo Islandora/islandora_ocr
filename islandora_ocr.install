@@ -56,10 +56,36 @@ function islandora_ocr_cleanup_derivatives() {
  * be considered to also have a matching generate_hocr flag, mimicing previous
  * functionality.
  */
-function islandora_ocr_update_7001(&$sandbox) {
-  $timestamp = date_iso8601(time());
-  variable_set(ISLANDORA_OCR_UPDATE_7001_TIMESTAMP, $timestamp);
-  return t("Timestamp set to @timestamp", array(
-    '@timestamp' => $timestamp,
-  ));
+function islandora_ocr_update_7001() {
+  if (_islandora_ocr_update_7001_generate_ocr_flags_exist()) {
+    $timestamp = date_iso8601(time());
+    variable_set(ISLANDORA_OCR_UPDATE_7001_TIMESTAMP, $timestamp);
+    return t("Timestamp set to @timestamp", array(
+      '@timestamp' => $timestamp,
+    ));
+  }
+  variable_set(ISLANDORA_OCR_UPDATE_7001_TIMESTAMP, FALSE);
+  return t("No generate_ocr flags found in the repository; the timestamp has been set to FALSE to skip making checks.");
+}
+
+/**
+ * Helper to determine whether we need to set a timestamp for update 7001.
+ *
+ * @return bool
+ *   Whether there are objects in the repository that have a generate_ocr flag.
+ */
+function _islandora_ocr_update_7001_generate_ocr_flags_exist() {
+  // XXX: Standard paranoia.
+  drupal_static_reset('islandora_get_tuque_connection');
+  $conn = islandora_get_tuque_connection();
+  $query = <<<EOQ
+SELECT ?pid
+FROM <#ri>
+WHERE {
+  ?pid <http://islandora.ca/ontology/relsext#generate_ocr> ?value .
+}
+EOQ;
+  // We only need to know that there's at least one.
+  $results = $conn->repository->ri->sparqlQuery($query, 1);
+  return (bool) count($results);
 }
