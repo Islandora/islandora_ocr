@@ -345,7 +345,7 @@ function islandora_ocr_derive_datastream($type, AbstractObject $object, $force =
       );
     }
     file_unmanaged_delete($file);
-    _islandora_ocr_remove_generating_rels_ext_statement($object, $map[$type]['flag'])
+    _islandora_ocr_remove_generating_rels_ext_statement($object, $map[$type]['flag']);
     return $to_return;
   }
 }
