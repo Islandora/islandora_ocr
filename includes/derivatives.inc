@@ -361,19 +361,7 @@ function islandora_ocr_derive_ocr(AbstractObject $object, $force = FALSE) {
  * Derive the HOCR stream from OBJ.
  */
 function islandora_ocr_derive_hocr(AbstractObject $object, $force = FALSE) {
-
-  $timestamp = variable_get(ISLANDORA_OCR_UPDATE_7001_TIMESTAMP, NULL);
-  if (!isset($timestamp)) {
-    $flag = ISLANDORA_OCR_GENERATE_HOCR_RELS_STATEMENT;
-  }
-  else {
-    $diff = date_diff(new DateTime($timestamp), $object->createdDate);
-    // Negative diffs indicate an object created before the timestamp.
-    $flag = $diff->invert ?
-      ISLANDORA_OCR_GENERATE_OCR_RELS_STATEMENT :
-      ISLANDORA_OCR_GENERATE_HOCR_RELS_STATEMENT;
-  }
-  return islandora_ocr_derive_datastream('HOCR', $flag, $object, $force);
+  return islandora_ocr_derive_datastream('HOCR', ISLANDORA_OCR_GENERATE_HOCR_RELS_STATEMENT, $object, $force);
 }
 
 /**
@@ -488,9 +476,7 @@ function islandora_ocr_remove_generate_ocr_rels_ext_statement(AbstractObject $ob
   module_load_include('inc', 'islandora', 'includes/utilities');
   $message = filter_xss(islandora_deprecated('7.x-1.10', t('In the future, OCR-generating RELS-EXT statements should be removed using _islandora_ocr_remove_generating_rels_ext_statement().')));
   trigger_error($message, E_USER_DEPRECATED);
-  if ($object->relationships->get(ISLANDORA_RELS_EXT_URI, ISLANDORA_OCR_GENERATE_OCR_RELS_STATEMENT, NULL, RELS_TYPE_PLAIN_LITERAL)) {
-    $object->relationships->remove(ISLANDORA_RELS_EXT_URI, ISLANDORA_OCR_GENERATE_OCR_RELS_STATEMENT, NULL, RELS_TYPE_PLAIN_LITERAL);
-  }
+  _islandora_ocr_remove_generating_rels_ext_statement($object, ISLANDORA_OCR_GENERATE_OCR_RELS_STATEMENT);
 }
 
 /**

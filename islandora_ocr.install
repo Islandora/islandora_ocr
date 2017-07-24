@@ -64,8 +64,7 @@ function islandora_ocr_update_7001() {
       '@timestamp' => $timestamp,
     ));
   }
-  variable_set(ISLANDORA_OCR_UPDATE_7001_TIMESTAMP, FALSE);
-  return t("No generate_ocr flags found in the repository; the timestamp has been set to FALSE to skip making checks.");
+  return t("No generate_ocr flags found in the repository.");
 }
 
 /**
@@ -79,13 +78,12 @@ function _islandora_ocr_update_7001_generate_ocr_flags_exist() {
   drupal_static_reset('islandora_get_tuque_connection');
   $conn = islandora_get_tuque_connection();
   $query = <<<EOQ
-SELECT ?pid
-FROM <#ri>
+ASK FROM <#ri>
 WHERE {
   ?pid <http://islandora.ca/ontology/relsext#generate_ocr> ?value .
 }
 EOQ;
   // We only need to know that there's at least one.
-  $results = $conn->repository->ri->sparqlQuery($query, 1);
-  return (bool) count($results);
+  $results = $conn->repository->ri->sparqlQuery($query);
+  return $results[0]['k0']['value'] === 'true' ? TRUE : FALSE;
 }
