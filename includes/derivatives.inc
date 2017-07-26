@@ -319,7 +319,7 @@ function islandora_ocr_derive_datastream($type, AbstractObject $object, $force =
 
     $datastream = $object['OBJ'];
     $file = islandora_ocr_get_converted_source($datastream);
-    $derivative_file = call_user_func_array($map[$type]['generate_callback'], array($file, array('language' => $language)));
+    $derivative_file = call_user_func_array($dsid_map[$type]['generation_callback'], array($file, array('language' => $language)));
     if ($derivative_file && islandora_ocr_update_datastream($object, $derivative_file, $type)) {
       $to_return['success'] = TRUE;
       $to_return['messages'][] = array(
@@ -345,7 +345,7 @@ function islandora_ocr_derive_datastream($type, AbstractObject $object, $force =
       );
     }
     file_unmanaged_delete($file);
-    _islandora_ocr_remove_generating_rels_ext_statement($object, $map[$type]['flag']);
+    _islandora_ocr_remove_generating_rels_ext_statement($object, $dsid_map[$type]['flag']);
     return $to_return;
   }
 }
@@ -354,14 +354,14 @@ function islandora_ocr_derive_datastream($type, AbstractObject $object, $force =
  * Derive the OCR stream from OBJ.
  */
 function islandora_ocr_derive_ocr(AbstractObject $object, $force = FALSE) {
-  return islandora_ocr_derive_datastream('OCR', ISLANDORA_OCR_GENERATE_OCR_RELS_STATEMENT, $object, $force);
+  return islandora_ocr_derive_datastream('OCR', $object, $force);
 }
 
 /**
  * Derive the HOCR stream from OBJ.
  */
 function islandora_ocr_derive_hocr(AbstractObject $object, $force = FALSE) {
-  return islandora_ocr_derive_datastream('HOCR', ISLANDORA_OCR_GENERATE_HOCR_RELS_STATEMENT, $object, $force);
+  return islandora_ocr_derive_datastream('HOCR', $object, $force);
 }
 
 /**
