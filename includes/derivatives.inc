@@ -273,26 +273,18 @@ function islandora_ocr_derive_datastream($type, AbstractObject $object, $force =
   $language_array = $object->relationships->get(ISLANDORA_RELS_EXT_URI, 'hasLanguage');
   $language = isset($language_array[0]['object']['value']) ? $language_array[0]['object']['value'] : 'eng';
   $generate_datastream = 'TRUE';
-  // If this object is older than the time this module was updated to 7001, we
-  // want to use the OCR flag instead of the HOCR flag to determine if we should
-  // derive. If no update was required, no check is either.
-  if ($timestamp = variable_get(ISLANDORA_OCR_UPDATE_7001_TIMESTAMP, FALSE)) {
-    $diff = date_diff(new DateTime($timestamp), $object->createdDate);
-    // Negative diffs indicate an object created before the timestamp.
-    if ($diff->invert) {
-      $rels = $object->relationships;
-      $initial_autocommit = $rels->autoCommit;
-      foreach ($rels->get(ISLANDORA_RELS_EXT_URI, ISLANDORA_OCR_GENERATE_OCR_RELS_STATEMENT) as $results) {
-        $rels->autoCommit = FALSE;
-        $rels->add(ISLANDORA_RELS_EXT_URI, ISLANDORA_OCR_GENERATE_HOCR_RELS_STATEMENT, $result['object']['value'], RELS_TYPE_PLAIN_LITERAL);
-      }
-      $rels->autoCommit = $initial_autocommit;
-    }
-  }
   // Determine if we should generate.
-  $batch = $object->relationships->get(ISLANDORA_RELS_EXT_URI, $dsid_map[$type]['flag']);
-  if ($batch) {
-    $generate_datastream = $batch[0]['object']['value'];
+  $generate_value = $object->relationships->get(ISLANDORA_RELS_EXT_URI, $dsid_map[$type]['flag']);
+  if ($generate_value) {
+    $generate_datastream = $generate_value[0]['object']['value'];
+  }
+  // If an OCR flag exists with no HOCR flag, this is an old item and we should
+  // use the OCR flag value.
+  elseif ($type == 'HOCR') {
+    $ocr_value = $object->relationships->get(ISLANDORA_RELS_EXT_URI, ISLANDORA_OCR_GENERATE_OCR_RELS_STATEMENT);
+    if ($ocr_value) {
+      $generate_datastream = $ocr_value[0]['object']['value'];
+    }
   }
   // XXX: The 'no_ocr' is a bit misleading, as a lack of language selection
   // negates generation of HOCR as well. Leaving as-is for compatibility with
