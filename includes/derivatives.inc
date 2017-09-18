@@ -490,6 +490,11 @@ function islandora_ocr_set_generate_ocr_rels_ext_statement(AbstractObject $objec
  *   Whether to remove the 'generate ocr' statement.
  * @param bool $generate_hocr
  *   Whether to remove the 'generate hocr' statement.
+ *
+ * @return array
+ *   Returns an empty array to satisfy the requirements of derivative-generating
+ *   callbacks so that this can be used as a derivative callback after
+ *   generating OCR and/or HOCR.
  */
 function islandora_ocr_remove_generating_rels_ext_statements(AbstractObject $object, $generate_ocr = TRUE, $generate_hocr = TRUE) {
   $previous_autocommit = $object->relationships->autoCommit;
@@ -504,6 +509,7 @@ function islandora_ocr_remove_generating_rels_ext_statements(AbstractObject $obj
     }
   }
   $object->relationships->autoCommit = $previous_autocommit;
+  return array();
 }
 
 /**
