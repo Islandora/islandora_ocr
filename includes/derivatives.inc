@@ -337,7 +337,6 @@ function islandora_ocr_derive_datastream($type, AbstractObject $object, $force =
       );
     }
     file_unmanaged_delete($file);
-    _islandora_ocr_remove_generating_rels_ext_statement($object, $dsid_map[$type]['flag']);
     return $to_return;
   }
 }
@@ -466,9 +465,9 @@ function islandora_ocr_update_datastream(AbstractObject $object, $file, $dsid, $
  */
 function islandora_ocr_remove_generate_ocr_rels_ext_statement(AbstractObject $object) {
   module_load_include('inc', 'islandora', 'includes/utilities');
-  $message = filter_xss(islandora_deprecated('7.x-1.10', t('In the future, OCR-generating RELS-EXT statements should be removed using _islandora_ocr_remove_generating_rels_ext_statement().')));
+  $message = filter_xss(islandora_deprecated('7.x-1.10', t('In the future, OCR-generating RELS-EXT statements should be removed together using islandora_ocr_remove_generating_rels_ext_statements().')));
   trigger_error($message, E_USER_DEPRECATED);
-  _islandora_ocr_remove_generating_rels_ext_statement($object, ISLANDORA_OCR_GENERATE_OCR_RELS_STATEMENT);
+  islandora_ocr_remove_generating_rels_ext_statements($object, TRUE, FALSE);
 }
 
 /**
@@ -483,17 +482,28 @@ function islandora_ocr_set_generate_ocr_rels_ext_statement(AbstractObject $objec
 }
 
 /**
- * Helper to remove OCR/HOCR generation RELS-EXT statements.
+ * Helper to remove one or more OCR/HOCR-generating statements.
  *
  * @param AbstractObject $object
- *   The object to remove relationships from.
- * @param string $flag
- *   The flag to remove.
+ *   Object to remove these statements from.
+ * @param bool $generate_ocr
+ *   Whether to remove the 'generate ocr' statement.
+ * @param bool $generate_hocr
+ *   Whether to remove the 'generate hocr' statement.
  */
-function _islandora_ocr_remove_generating_rels_ext_statement(AbstractObject $object, $flag) {
-  if ($object->relationships->get(ISLANDORA_RELS_EXT_URI, $flag, NULL, RELS_TYPE_PLAIN_LITERAL)) {
-    $object->relationships->remove(ISLANDORA_RELS_EXT_URI, $flag, NULL, RELS_TYPE_PLAIN_LITERAL);
+function islandora_ocr_remove_generating_rels_ext_statements(AbstractObject $object, $generate_ocr = TRUE, $generate_hocr = TRUE) {
+  $previous_autocommit = $object->relationships->autoCommit;
+  $object->relationships->autoCommit = FALSE;
+  $statements = array(
+    ISLANDORA_OCR_GENERATE_OCR_RELS_STATEMENT => $generate_ocr,
+    ISLANDORA_OCR_GENERATE_HOCR_RELS_STATEMENT => $generate_hocr,
+  );
+  foreach ($statements as $predicate => $remove) {
+    if ($remove) {
+      $object->relationships->remove(ISLANDORA_RELS_EXT_URI, $predicate, NULL);
+    }
   }
+  $object->relationships->autoCommit = $previous_autocommit;
 }
 
 /**

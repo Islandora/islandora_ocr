@@ -10,7 +10,6 @@ define('ISLANDORA_OCR_TESSERACT_REQUIRED_VERSION', '3.02.02');
 // Constants (not deprecated).
 const ISLANDORA_OCR_GENERATE_OCR_RELS_STATEMENT = 'generate_ocr';
 const ISLANDORA_OCR_GENERATE_HOCR_RELS_STATEMENT = 'generate_hocr';
-const ISLANDORA_OCR_UPDATE_7001_TIMESTAMP = 'islandora_ocr_update_7001_generate_ocr_timestamp';
 
 /**
  * Implements hook_menu().
