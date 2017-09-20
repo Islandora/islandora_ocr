@@ -465,7 +465,7 @@ function islandora_ocr_update_datastream(AbstractObject $object, $file, $dsid, $
  */
 function islandora_ocr_remove_generate_ocr_rels_ext_statement(AbstractObject $object) {
   module_load_include('inc', 'islandora', 'includes/utilities');
-  $message = filter_xss(islandora_deprecated('7.x-1.10', t('In the future, OCR-generating RELS-EXT statements should be removed together using islandora_ocr_remove_generating_rels_ext_statements().')));
+  $message = filter_xss(islandora_deprecated('7.x-1.11', t('In the future, OCR-generating RELS-EXT statements should be removed together using islandora_ocr_remove_generating_rels_ext_statements().')));
   trigger_error($message, E_USER_DEPRECATED);
   islandora_ocr_remove_generating_rels_ext_statements($object, TRUE, FALSE);
 }
@@ -475,7 +475,7 @@ function islandora_ocr_remove_generate_ocr_rels_ext_statement(AbstractObject $ob
  */
 function islandora_ocr_set_generate_ocr_rels_ext_statement(AbstractObject $object, $generate_ocr = TRUE) {
   module_load_include('inc', 'islandora', 'includes/utilities');
-  $message = filter_xss(islandora_deprecated('7.x-1.10', t('In the future, OCR-generating RELS-EXT statements should be set together using islandora_ocr_set_generating_rels_ext_statements().')));
+  $message = filter_xss(islandora_deprecated('7.x-1.11', t('In the future, OCR-generating RELS-EXT statements should be set together using islandora_ocr_set_generating_rels_ext_statements().')));
   trigger_error($message, E_USER_DEPRECATED);
   $generate_ocr = $generate_ocr ? 'TRUE' : 'FALSE';
   $object->relationships->add(ISLANDORA_RELS_EXT_URI, ISLANDORA_OCR_GENERATE_OCR_RELS_STATEMENT, $generate_ocr, RELS_TYPE_PLAIN_LITERAL);
