@@ -12,7 +12,6 @@ function islandora_ocr_uninstall() {
   $variables = array(
     'islandora_ocr_tesseract',
     'islandora_ocr_tesseract_enabled_languages',
-    ISLANDORA_OCR_UPDATE_7001_TIMESTAMP,
   );
   array_walk($variables, 'variable_del');
   islandora_ocr_cleanup_derivatives();
