@@ -513,7 +513,7 @@ function islandora_ocr_remove_generating_rels_ext_statements(AbstractObject $obj
 }
 
 /**
- * Helper to set both the OCR/HOCR generation RELS-EXT statements.
+ * Helper to set the RELS-EXT statements used in OCR/HOCR generation.
  *
  * @param AbstractObject $object
  *   Object to set these statements to.
@@ -523,8 +523,11 @@ function islandora_ocr_remove_generating_rels_ext_statements(AbstractObject $obj
  * @param bool $generate_hocr
  *   The 'generate_hocr' statement to set; will be converted to a string
  *   literal. Leave NULL to ignore setting this statement.
+ * @param string $lang
+ *   The 3-character language code to be passed to Tesseract. Leave NULL to
+ *   ignore setting this statement.
  */
-function islandora_ocr_set_generating_rels_ext_statements(AbstractObject $object, $generate_ocr = NULL, $generate_hocr = NULL) {
+function islandora_ocr_set_generating_rels_ext_statements(AbstractObject $object, $generate_ocr = NULL, $generate_hocr = NULL, $lang = NULL) {
   $map_to_string_literal = function ($bool) {
     return $bool ? 'TRUE' : 'FALSE';
   };
@@ -535,9 +538,12 @@ function islandora_ocr_set_generating_rels_ext_statements(AbstractObject $object
   $previous_autocommit = $object->relationships->autoCommit;
   $object->relationships->autoCommit = FALSE;
   foreach ($statements as $predicate => $bool) {
-    if (!is_null($object)) {
+    if (!is_null($bool)) {
       $object->relationships->add(ISLANDORA_RELS_EXT_URI, $predicate, $map_to_string_literal($bool), RELS_TYPE_PLAIN_LITERAL);
     }
+  }
+  if (!is_null($lang)) {
+    $object->relationships->add(ISLANDORA_RELS_EXT_URI, 'hasLanguage', $lang, RELS_TYPE_PLAIN_LITERAL);
   }
   $object->relationships->autoCommit = $previous_autocommit;
 }
