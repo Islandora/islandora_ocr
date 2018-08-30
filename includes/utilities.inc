@@ -98,16 +98,7 @@ function islandora_ocr_get_tesseract_installed_languages($tesseract = NULL) {
  *   otherwise the abbreviation is returned unaltered.
  */
 function islandora_ocr_tesseract_language_name($language) {
-  $language_names = array(
-    'eng' => t('English'),
-    'fra' => t('French'),
-    'deu-frak' => t('German'),
-    'por' => t('Portugese'),
-    'spa' => t('Spanish'),
-    'hin' => t('Hindi'),
-    'jpn' => t('Japanese'),
-    'ita' => t('Italian'),
-  );
+  module_load_include('inc', 'islandora', 'includes/language_names');
   return isset($language_names[$language]) ? $language_names[$language] : $language;
 }
 
