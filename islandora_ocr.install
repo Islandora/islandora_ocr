@@ -45,7 +45,10 @@ function islandora_ocr_cleanup_derivatives() {
   }
 
   if (module_exists('islandora_newspaper')) {
-    $newspaper = variable_get('islandora_newspaper_ingest_derivatives', array('ocr' => FALSE));
+    $newspaper = variable_get('islandora_newspaper_ingest_derivatives', array(
+      'pdf' => 'pdf',
+      'image' => 'image',
+      'ocr' => FALSE));
     $newspaper['ocr'] = FALSE;
     variable_set('islandora_newspaper_ingest_derivatives', $newspaper);
   }
