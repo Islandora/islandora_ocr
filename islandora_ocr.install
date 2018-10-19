@@ -39,13 +39,13 @@ function islandora_ocr_cleanup_derivatives() {
     $book = variable_get('islandora_book_ingest_derivatives', array(
       'pdf' => 'pdf',
       'image' => 'image',
-      'ocr' => FALSE));
+      'ocr' => FALSE ));
     $book['ocr'] = FALSE;
     variable_set('islandora_book_ingest_derivatives', $book);
   }
 
   if (module_exists('islandora_newspaper')) {
-    $newspaper = variable_get('islandora_newspaper_ingest_derivatives', array('ocr' => FALSE));
+    $newspaper = variable_get('islandora_newspaper_ingest_derivatives', array('ocr' => FALSE ));
     $newspaper['ocr'] = FALSE;
     variable_set('islandora_newspaper_ingest_derivatives', $newspaper);
   }
