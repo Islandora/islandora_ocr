@@ -7,7 +7,6 @@
 
 
 /**
- * Respond to node view count being incremented.
  *
  * This hooks allows modules to define their own list of human readable names for the given tesseract abbreviation
  *
