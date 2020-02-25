@@ -375,6 +375,32 @@ function islandora_ocr_get_identify() {
 }
 
 /**
+ * Uses Imagemagick's identify to determine if the file is a TIFF.
+ *
+ * @param string $file
+ *   A file-system path to the file in question.
+ *
+ * @return bool
+ *   A boolean indicating if the file contains a TIFF.
+ */
+function islandora_ocr_is_tiff($file) {
+  $identify = islandora_ocr_get_identify();
+
+  $escaped_file = escapeshellarg(drupal_realpath($file));
+
+  $codec = exec(escapeshellcmd("$identify -format \"%m\" ") . $escaped_file);
+
+  $is_tiff = strrpos(strtolower($codec), 'tiff');
+
+  /* Avoid false negatives after strrpos */
+  if ($is_tiff !== FALSE) {
+    $is_tiff = TRUE;
+  }
+
+  return $is_tiff;
+}
+
+/**
  * Calls imagemagick's convert command with the given arguments.
  *
  * @param string $src
@@ -390,7 +416,10 @@ function islandora_ocr_get_identify() {
  *   The destination file path if successful otherwise FALSE.
  */
 function islandora_ocr_imagemagick_convert($src, $dest, $args) {
-  $src = drupal_realpath($src) . '[0]';
+  $src = drupal_realpath($src);
+  if (islandora_ocr_is_tiff($src)) {
+    $src = $src . '[0]';
+  }
   $dest = drupal_realpath($dest);
   $context = array(
     'source' => $src,
