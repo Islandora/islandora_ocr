@@ -422,7 +422,7 @@ class HOCR {
    *   The XPath predicate to match the given term exactly.
    */
   protected function getCaseSensitiveMatchTermExpression($term, $node = 'text()') {
-    return "$node = \"{$term}\"";
+    return "$node = " . $this->escapeXpathQuote($term);
   }
 
   /**
@@ -436,7 +436,46 @@ class HOCR {
    */
   protected function getCaseInsensitiveMatchTermExpression($term, $node = 'text()') {
     $term = mb_strtolower($term);
-    return "php:functionString('mb_strtolower', $node) = \"{$term}\"";
+    return "php:functionString('mb_strtolower', $node) = " . $this->escapeXpathQuote($term);
+  }
+
+  /**
+   * Handles string adjustments with quotes.
+   *
+   * @param string $value
+   *   The value to escape for an xpath query.
+   *
+   * @return string
+   *   The updated string.
+   */
+  protected function escapeXpathQuote($value) {
+    if (strpos($value, '"') === FALSE) {
+      return '"' . $value . '"';
+    }
+    if (strpos($value, '\'') === FALSE) {
+      return '\'' . $value . '\'';
+    }
+
+    $concat_cmd = 'concat(';
+    $substrings = explode('"', $value);
+    for ($i = 0; $i < count($substrings); ++$i) {
+      $needComma = ($i > 0);
+      if ($substrings[$i] !== '') {
+        if ($i > 0) {
+          $concat_cmd .= ', ';
+        }
+        $concat_cmd .= '"' . $substrings[$i] . '"';
+        $needComma = TRUE;
+      }
+      if ($i < (count($substrings) - 1)) {
+        if ($needComma) {
+          $concat_cmd .= ', ';
+        }
+        $concat_cmd .= "'\"'";
+      }
+    }
+    $concat_cmd .= ')';
+    return $concat_cmd;
   }
 
   /**
