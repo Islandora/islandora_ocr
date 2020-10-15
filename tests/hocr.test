@@ -104,5 +104,10 @@ class HOCRUnitTestCase extends DrupalWebTestCase {
                  'solr' => $solr_params,
                  'match_exact_phrase' => FALSE));
     $this->assertEqual(count($results), 12, 'Solr search for "quick lazy fox" returned expected number of results');
+
+    // Test double and single quote search.
+    $term = '"HOCR\'s test case"';
+    $results = $hocr->search($term);
+    $this->assertEqual(count($results), 3, 'Seaching for match of phrase ' . $term . ', single and double quotes inclusive, returned expected number of results');
   }
 }
