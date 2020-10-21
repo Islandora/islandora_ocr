@@ -447,35 +447,33 @@ class HOCR {
    *
    * @return string
    *   The updated string.
+   *
+   * @see: https://github.com/minkphp/Mink/blob/master/src/Selector/Xpath/Escaper.php.
    */
   protected function escapeXpathQuote($value) {
-    if (strpos($value, '"') === FALSE) {
-      return '"' . $value . '"';
-    }
-    if (strpos($value, '\'') === FALSE) {
-      return '\'' . $value . '\'';
+
+    if (FALSE === strpos($value, "'")) {
+      return sprintf("'%s'", $value);
     }
 
-    $concat_cmd = 'concat(';
-    $substrings = explode('"', $value);
-    for ($i = 0; $i < count($substrings); ++$i) {
-      $needComma = ($i > 0);
-      if ($substrings[$i] !== '') {
-        if ($i > 0) {
-          $concat_cmd .= ', ';
-        }
-        $concat_cmd .= '"' . $substrings[$i] . '"';
-        $needComma = TRUE;
+    if (FALSE === strpos($value, '"')) {
+      return sprintf('"%s"', $value);
+    }
+
+    $string = $value;
+    $parts = array();
+    while (TRUE) {
+      if (FALSE !== $pos = strpos($string, "'")) {
+        $parts[] = sprintf("'%s'", substr($string, 0, $pos));
+        $parts[] = "\"'\"";
+        $string = substr($string, $pos + 1);
       }
-      if ($i < (count($substrings) - 1)) {
-        if ($needComma) {
-          $concat_cmd .= ', ';
-        }
-        $concat_cmd .= "'\"'";
+      else {
+        $parts[] = "'$string'";
+        break;
       }
     }
-    $concat_cmd .= ')';
-    return $concat_cmd;
+    return sprintf('concat(%s)', implode(',', $parts));
   }
 
   /**
