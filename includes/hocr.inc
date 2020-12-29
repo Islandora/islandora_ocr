@@ -451,7 +451,6 @@ class HOCR {
    * @see: https://github.com/minkphp/Mink/blob/master/src/Selector/Xpath/Escaper.php.
    */
   protected function escapeXpathQuote($value) {
-
     if (FALSE === strpos($value, "'")) {
       return sprintf("'%s'", $value);
     }
