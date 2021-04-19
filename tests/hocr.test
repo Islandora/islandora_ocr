@@ -110,4 +110,5 @@ class HOCRUnitTestCase extends DrupalWebTestCase {
     $results = $hocr->search($term);
     $this->assertEqual(count($results), 3, 'Seaching for match of phrase ' . $term . ', single and double quotes inclusive, returned expected number of results');
   }
+
 }
