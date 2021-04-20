@@ -79,7 +79,7 @@ function islandora_ocr_get_tesseract_installed_languages($tesseract = NULL) {
     $command = "$tesseract --list-langs 2>&1";
     exec($command, $output, $ret);
     if (!$ret && count($output) > 1) {
-      // Remove the descriptive first line, "List of available languages (n):"
+      // Remove the descriptive first line, "List of available languages (n):".
       array_shift($output);
       return $output;
     }
@@ -99,16 +99,16 @@ function islandora_ocr_get_tesseract_installed_languages($tesseract = NULL) {
  */
 function islandora_ocr_tesseract_language_name($language) {
   $language_names = array(
-      'eng' => t('English'),
-      'fra' => t('French'),
-      'deu-frak' => t('German - Fraktur'),
-      'por' => t('Portuguese'),
-      'spa' => t('Spanish'),
-      'hin' => t('Hindi'),
-      'jpn' => t('Japanese'),
-      'ita' => t('Italian'),
-      'lat' => t('Latin'),
-      'deu' => t('German'),
+    'eng' => t('English'),
+    'fra' => t('French'),
+    'deu-frak' => t('German - Fraktur'),
+    'por' => t('Portuguese'),
+    'spa' => t('Spanish'),
+    'hin' => t('Hindi'),
+    'jpn' => t('Japanese'),
+    'ita' => t('Italian'),
+    'lat' => t('Latin'),
+    'deu' => t('German'),
   );
   return isset($language_names[$language]) ? $language_names[$language] : $language;
 }
