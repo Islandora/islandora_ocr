@@ -108,7 +108,7 @@ function islandora_ocr_tesseract_language_name($language) {
       'jpn' => t('Japanese'),
       'ita' => t('Italian'),
       'lat' => t('Latin'),
-      'deu' => t('German')
+      'deu' => t('German'),
   );
   return isset($language_names[$language]) ? $language_names[$language] : $language;
 }
